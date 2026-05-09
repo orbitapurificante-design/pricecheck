@@ -194,7 +194,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
 .ctable td{padding:9px 10px;border-bottom:1px solid rgba(255,255,255,0.025);font-size:12px;vertical-align:middle;}
 .ctable tr.cr{cursor:pointer;}
 .ctable tr.cr:hover td{background:rgba(255,255,255,0.015);}
-.ctd-n{font-weight:600;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ctd-n{font-weight:600;max-width:110px;overflow-wrap:break-word;word-break:break-word;line-height:1.3;}
 .cmono{font-family:'JetBrains Mono',monospace;font-weight:600;}
 .cbest{color:var(--a2);}.cworst{color:var(--danger);}
 .cvar{font-size:9px;padding:2px 5px;border-radius:4px;font-weight:700;margin-top:2px;display:inline-block;}
@@ -1021,7 +1021,7 @@ function renderComparativo(){
         const ib=p===minP&&vals.length>1,iw=p===maxP&&vals.length>1;
         let vp='';
         if(pr>0){const d=p-pr;const pc=((d/pr)*100).toFixed(0);if(Math.abs(d)>0.005)vp=`<div class="cvar ${d<0?'cv-p':'cv-n'}">${d>0?'+':''}${pc}%</div>`;}
-        return`<td><div class="cmono ${ib?'cbest':iw?'cworst':''}">${p.toFixed(2)}€</div>${vp}<div style="font-size:9px;color:var(--muted)">${item.n}×</div></td>`;
+        return`<td><div class="cmono ${ib?'cbest':iw?'cworst':''}">${p.toFixed(2)}€</div>${vp}</td>`;
       }).join('')}
       <td>${diff!=null&&vals.length>1?`<span class="cdiff ${dc}">${diff.toFixed(2)}€</span>`:'—'}</td>
     </tr>`;
@@ -1153,6 +1153,7 @@ function exportarHistorico(){
   await abrirImgDB();
   await carregarTodasImgsDB();
   carregar();atualizarHeaderForn();atualizarStats();
+  setTimeout(abrirScanner,400);
 })();
 ['pmodal-bg','nmodal-bg','hmodal-bg','fmodal-bg','em-modal-bg'].forEach(id=>{
   document.getElementById(id).addEventListener('click',function(e){
