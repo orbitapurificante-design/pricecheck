@@ -307,7 +307,38 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
   <input type="file" id="f-fotos" multiple accept="image/*" style="display:none">
 </div>
 
-<!-- MODAL ENTRADA MANUAL -->
+<!-- SCANNER MODAL (câmara + manual) -->
+<div id="scan-modal" style="display:none;position:fixed;inset:0;z-index:9000;background:#000;flex-direction:column;">
+  <div id="scan-vwrap" style="flex:1;position:relative;overflow:hidden;background:#000;">
+    <video id="scan-video" playsinline autoplay muted style="width:100%;height:100%;object-fit:cover;display:block;"></video>
+    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-55%);width:70vw;max-width:280px;height:160px;border-radius:16px;box-shadow:0 0 0 4000px rgba(0,0,0,0.6);">
+      <div style="position:absolute;inset:-2px;border-radius:18px;border:2.5px solid #c9a84c;"></div>
+      <div style="position:absolute;width:22px;height:22px;top:-2px;left:-2px;border-top:3px solid #c9a84c;border-left:3px solid #c9a84c;border-radius:4px 0 0 0;"></div>
+      <div style="position:absolute;width:22px;height:22px;top:-2px;right:-2px;border-top:3px solid #c9a84c;border-right:3px solid #c9a84c;border-radius:0 4px 0 0;"></div>
+      <div style="position:absolute;width:22px;height:22px;bottom:-2px;left:-2px;border-bottom:3px solid #c9a84c;border-left:3px solid #c9a84c;border-radius:0 0 0 4px;"></div>
+      <div style="position:absolute;width:22px;height:22px;bottom:-2px;right:-2px;border-bottom:3px solid #c9a84c;border-right:3px solid #c9a84c;border-radius:0 0 4px 0;"></div>
+      <div id="scan-line" style="position:absolute;left:5%;right:5%;height:2px;background:linear-gradient(90deg,transparent,#c9a84c,transparent);animation:sl 2s ease-in-out infinite;"></div>
+    </div>
+    <div style="position:absolute;bottom:10px;left:0;right:0;text-align:center;font-size:11px;color:rgba(255,255,255,0.5);letter-spacing:1px;">APONTE PARA O CÓDIGO DE BARRAS</div>
+  </div>
+  <div style="padding:14px 16px 20px;background:#1a2340;border-top:1px solid rgba(201,168,76,0.2);">
+    <div id="scan-status" style="text-align:center;font-size:12px;min-height:18px;margin-bottom:10px;font-weight:500;"></div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;">
+      <select id="scan-sel" style="flex:1;background:#1e2a4a;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:9px 12px;color:#f1f5f9;font-size:12px;font-family:Inter,sans-serif;outline:none;" onchange="trocarCamera()"><option>A iniciar...</option></select>
+      <button onclick="flipCamera()" style="width:40px;height:40px;background:#1e2a4a;border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#f1f5f9;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">🔄</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;">
+      <input type="text" id="scan-input" style="flex:1;background:#1e2a4a;border:1.5px solid rgba(255,255,255,0.1);border-radius:8px;padding:11px 14px;color:#f1f5f9;font-size:16px;font-family:'JetBrains Mono',monospace;text-align:center;outline:none;" placeholder="Código manual..." inputmode="numeric" onkeydown="if(event.key==='Enter')confirmarManual()">
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="confirmarManual()" style="flex:1;padding:13px;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;background:#c9a84c;color:#1a2340;">✓ Confirmar</button>
+      <button onclick="fecharScanner()" style="flex:1;padding:13px;border:1px solid rgba(255,255,255,0.1);border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;background:#1e2a4a;color:#f1f5f9;">✕ Fechar</button>
+    </div>
+  </div>
+</div>
+<style>@keyframes sl{0%,100%{top:6%}50%{top:88%}}</style>
+
+<!-- MODAL ENTRADA MANUAL (fallback) -->
 <div class="modal-bg" id="em-modal-bg">
   <div class="modal-card">
     <div class="mhandle"></div>
@@ -370,11 +401,11 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
   <!-- QR / Documento section -->
   <div class="scan-section">
     <div class="scan-sec-lbl">QR · DOCUMENTO</div>
-    <button class="scan-main-btn" onclick="abrirEntradaManual()">
-      <span style="font-size:20px">📦</span> INSERIR CÓDIGO MANUAL
+    <button class="scan-main-btn" onclick="abrirScanner()">
+      <span style="font-size:20px">📷</span> LER CÓDIGO DE BARRAS
     </button>
     <div class="scan-sub-row">
-      <button class="scan-sub-btn" onclick="abrirEntradaManual()"><span>🔢</span> CÓDIGO</button>
+      <button class="scan-sub-btn" onclick="abrirEntradaManual()"><span>🔢</span> MANUAL</button>
       <button class="scan-sub-btn" onclick="document.getElementById('f-excel').click()"><span>📊</span> EXCEL</button>
     </div>
   </div>
@@ -560,7 +591,131 @@ function findProd(codigo){
   );
 }
 
-// ══ ENTRADA MANUAL (substituição da câmara) ══
+// ══ CÂMARA / SCANNER ══
+let zxingReader=null,streamAtual=null,camerasDisponiveis=[],cameraIndex=0,scannerAberto=false;
+let lastScanCode=null,scanLoopId=null,barcodeDetector=null;
+
+function temBarcodeDetector(){return'BarcodeDetector'in window;}
+
+async function abrirScanner(){
+  const modal=document.getElementById('scan-modal');
+  modal.style.display='flex';scannerAberto=true;
+  document.getElementById('scan-input').value='';
+  setScanStatus('A iniciar câmera...','');
+  if(temBarcodeDetector()){
+    try{barcodeDetector=new BarcodeDetector({formats:['ean_13','ean_8','code_128','code_39','qr_code','upc_a','upc_e','itf','codabar','code_93']});}
+    catch(e){barcodeDetector=null;}
+  }
+  await iniciarCamera();
+}
+
+async function iniciarCamera(){
+  pararCamera();
+  setScanStatus('A iniciar câmera...','');
+  try{
+    const sel=document.getElementById('scan-sel');
+    const deviceId=sel.value&&sel.value.length>5?sel.value:null;
+    const constraints=deviceId
+      ?{video:{deviceId:{exact:deviceId}},audio:false}
+      :{video:{facingMode:{exact:'environment'},width:{ideal:1280},height:{ideal:720}},audio:false};
+    try{streamAtual=await navigator.mediaDevices.getUserMedia(constraints);}
+    catch(e1){
+      if(!deviceId){streamAtual=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280}},audio:false});}
+      else throw e1;
+    }
+    try{
+      const devices=await navigator.mediaDevices.enumerateDevices();
+      camerasDisponiveis=devices.filter(d=>d.kind==='videoinput');
+      const trackLabel=(streamAtual.getVideoTracks()[0]?.label||'').toLowerCase();
+      sel.innerHTML=camerasDisponiveis.map((c,i)=>{
+        const lbl=c.label||'Câmera '+(i+1);
+        const s2=trackLabel&&c.label&&trackLabel===c.label.toLowerCase();
+        return`<option value="${c.deviceId}"${s2?' selected':''}>${lbl}</option>`;
+      }).join('');
+    }catch(e){sel.innerHTML='<option value="">Câmera ativa</option>';}
+    const video=document.getElementById('scan-video');
+    video.srcObject=streamAtual;video.muted=true;
+    try{await video.play();}catch(e){}
+    setScanStatus('✓ Câmera ativa — aponte para o código','ok');
+    if(temBarcodeDetector()&&barcodeDetector)iniciarLoopNativo(video);
+    else carregarZXingEIniciar(video);
+  }catch(err){
+    let msg='⚠️ Câmera indisponível — use entrada manual';
+    if(err.name==='NotAllowedError')msg='❌ Permissão negada — verifique definições';
+    else if(err.name==='NotFoundError')msg='❌ Câmera não encontrada';
+    else if(err.name==='NotReadableError')msg='❌ Câmera em uso por outra app';
+    setScanStatus(msg,'err');
+  }
+}
+
+function iniciarLoopNativo(video){
+  if(scanLoopId)cancelAnimationFrame(scanLoopId);
+  lastScanCode=null;let processing=false;
+  async function loop(){
+    if(!scannerAberto)return;
+    if(!processing&&video.readyState>=2){
+      processing=true;
+      try{
+        const barcodes=await barcodeDetector.detect(video);
+        if(barcodes.length>0&&scannerAberto){
+          const cod=barcodes[0].rawValue;
+          if(cod!==lastScanCode){lastScanCode=cod;setScanStatus('✓ Lido: '+cod,'ok');bipe();setTimeout(()=>{fecharScanner();processarCodigo(cod);},350);return;}
+        }
+      }catch(e){}
+      processing=false;
+    }
+    scanLoopId=requestAnimationFrame(loop);
+  }
+  scanLoopId=requestAnimationFrame(loop);
+}
+
+function iniciarZXing(video){
+  try{
+    zxingReader=new ZXing.BrowserMultiFormatReader();lastScanCode=null;
+    zxingReader.decodeFromStream(streamAtual,video,(result,err)=>{
+      if(result&&scannerAberto){const cod=result.getText();if(cod===lastScanCode)return;lastScanCode=cod;setScanStatus('✓ Lido: '+cod,'ok');bipe();setTimeout(()=>{fecharScanner();processarCodigo(cod);},350);}
+    });
+  }catch(e){setScanStatus('Use entrada manual','err');}
+}
+
+function carregarZXingEIniciar(video){
+  if(window.ZXING_LOADED&&typeof ZXing!=='undefined'){iniciarZXing(video);return;}
+  const s=document.createElement('script');
+  s.src='https://unpkg.com/@zxing/library@0.20.0/umd/index.min.js';
+  s.onload=()=>{window.ZXING_LOADED=true;setScanStatus('✓ Câmera ativa','ok');iniciarZXing(video);};
+  s.onerror=()=>setScanStatus('Leitor indisponível — use entrada manual','err');
+  document.head.appendChild(s);
+}
+
+async function flipCamera(){
+  pararCamera();
+  try{
+    const devices=await navigator.mediaDevices.enumerateDevices();
+    camerasDisponiveis=devices.filter(d=>d.kind==='videoinput');
+    if(camerasDisponiveis.length>1){cameraIndex=(cameraIndex+1)%camerasDisponiveis.length;document.getElementById('scan-sel').value=camerasDisponiveis[cameraIndex].deviceId;}
+  }catch(e){}
+  await iniciarCamera();
+}
+function trocarCamera(){iniciarCamera();}
+function pararCamera(){
+  if(scanLoopId){cancelAnimationFrame(scanLoopId);scanLoopId=null;}
+  if(streamAtual){streamAtual.getTracks().forEach(t=>t.stop());streamAtual=null;}
+  if(zxingReader){try{zxingReader.reset();}catch(e){}zxingReader=null;}
+  const v=document.getElementById('scan-video');if(v)v.srcObject=null;
+}
+function fecharScanner(){pararCamera();document.getElementById('scan-modal').style.display='none';scannerAberto=false;}
+function confirmarManual(){const v=document.getElementById('scan-input').value.trim();if(!v){toast('Insira um código','err');return;}fecharScanner();processarCodigo(v);}
+function setScanStatus(msg,tipo){const el=document.getElementById('scan-status');el.textContent=msg;el.className='';el.style.color=tipo==='ok'?'#10b981':tipo==='err'?'#ef4444':'#7a8fba';}
+
+let audioCtx=null;
+function bipe(){
+  try{if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();const o=audioCtx.createOscillator();const g=audioCtx.createGain();o.connect(g);g.connect(audioCtx.destination);o.frequency.value=1200;o.type='sine';g.gain.setValueAtTime(0.3,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.15);o.start(audioCtx.currentTime);o.stop(audioCtx.currentTime+0.15);}catch(e){}
+  if(navigator.vibrate)navigator.vibrate([80]);
+}
+
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&scannerAberto)fecharScanner();});
+
+// ══ ENTRADA MANUAL (fallback) ══
 function abrirEntradaManual(){
   document.getElementById('em-input').value='';
   document.getElementById('em-modal-bg').classList.add('open');
