@@ -143,13 +143,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
 .scan-sub-btn:active{border-color:var(--a);color:var(--a);}
 .scan-sub-btn span{font-size:15px;}
 
-/* DADOS DOCUMENTO */
-.dados-section{margin:12px;background:#fff;border-radius:var(--r16);overflow:hidden;}
-.dados-lbl{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#666;padding:14px 14px 8px;}
-.dados-field{padding:10px 14px;border-bottom:1px solid #f0f0f0;}
-.dados-field-lbl{font-size:9px;color:#999;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;}
-.dados-field input{width:100%;border:none;outline:none;font-size:14px;font-family:'Inter',sans-serif;color:#333;background:transparent;font-weight:500;}
-.dados-field input::placeholder{color:#bbb;}
+
 
 /* STATS GRID */
 .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 12px 12px;}
@@ -273,9 +267,9 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
 <!-- HEADER -->
 <header>
   <div class="hrow1">
+    <button class="hmenu" onclick="toggleDrawer()">&#9776;</button>
     <div class="hlogo">Price<span>Check</span> · Pro</div>
     <span class="hdate" id="hdate"></span>
-    <button class="hmenu" onclick="toggleDrawer()">⋯</button>
   </div>
   <div class="hrow2">
     <div class="hforn sem" id="hforn" onclick="nav('m4')">
@@ -408,23 +402,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
       <button class="scan-sub-btn" onclick="document.getElementById('f-excel').click()"><span>📊</span> EXCEL</button>
     </div>
   </div>
-    <div class="dados-field">
-      <div class="dados-field-lbl">COLABORADOR</div>
-      <input type="text" id="doc-colab" placeholder="🔑 Administrador" value="">
-    </div>
-    <div class="dados-field">
-      <div class="dados-field-lbl">CLIENTE</div>
-      <input type="text" id="doc-cliente" placeholder="Nome do cliente">
-    </div>
-    <div class="dados-field">
-      <div class="dados-field-lbl">NIF / CONTRIBUINTE</div>
-      <input type="text" id="doc-nif" placeholder="Ex: 123456789" inputmode="numeric">
-    </div>
-    <div class="dados-field" style="border-bottom:none;">
-      <div class="dados-field-lbl">FORNECEDOR ATIVO</div>
-      <input type="text" id="doc-forn" placeholder="Nenhum selecionado" readonly onclick="nav('m4')" style="cursor:pointer;color:#1a2340;font-weight:600;">
-    </div>
-  </div>
+
 
   <!-- Stats -->
   <div class="stat-grid">
