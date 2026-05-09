@@ -24,9 +24,9 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 /* ── HEADER ── */
 header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);border-bottom:1px solid rgba(201,168,76,0.2);display:flex;flex-direction:column;}
 .hrow1{height:52px;display:flex;align-items:center;gap:10px;padding:0 14px;}
-.hlogo{font-size:16px;font-weight:800;letter-spacing:-0.3px;color:var(--text);white-space:nowrap;}
+.hlogo{font-size:19px;font-weight:800;letter-spacing:-0.5px;color:var(--text);white-space:nowrap;}
 .hlogo span{color:var(--a);}
-.hdate{font-size:11px;color:var(--muted);margin-left:6px;font-weight:500;}
+.hdate{font-size:13px;color:var(--a);font-weight:700;margin-left:auto;padding-right:4px;}
 
 .hrow2{display:flex;align-items:center;gap:8px;padding:0 14px 10px;}
 .hforn{flex:1;background:rgba(255,255,255,0.05);border:1px solid var(--bd2);border-radius:var(--r8);padding:7px 11px;color:var(--text);font-weight:600;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:7px;min-width:0;overflow:hidden;transition:background 0.15s;}
@@ -290,14 +290,39 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
     <div class="dsep">Dados</div>
     <button class="dbtn dbtn-p" onclick="document.getElementById('f-excel').click();fecharTudo()">📊 Carregar Excel de Produtos</button>
     <button class="dbtn dbtn-s" onclick="document.getElementById('f-fotos').click();fecharTudo()">🖼️ Carregar Fotos dos Produtos</button>
+    <div class="dsep">Sincronizar</div>
+    <button class="dbtn dbtn-p" onclick="exportarJSON();fecharTudo()">📤 Exportar Preços (JSON)</button>
+    <button class="dbtn dbtn-s" onclick="exportarEWhatsApp();fecharTudo()">💬 Exportar + Enviar WhatsApp</button>
+    <button class="dbtn dbtn-s" onclick="document.getElementById('f-import').click();fecharTudo()">📥 Importar Preços (JSON)</button>
     <div class="dsep">Exportar</div>
-    <button class="dbtn dbtn-s" onclick="exportarComparativo();fecharTudo()">📥 Exportar Comparativo Excel</button>
-    <button class="dbtn dbtn-s" onclick="exportarHistorico();fecharTudo()">📋 Exportar Histórico Completo</button>
+    <button class="dbtn dbtn-s" onclick="exportarComparativo();fecharTudo()">📊 Exportar Comparativo Excel</button>
+    <button class="dbtn dbtn-s" onclick="exportarHistorico();fecharTudo()">📋 Exportar Histórico Excel</button>
     <div class="dsep">Sistema</div>
     <button class="dbtn dbtn-d" onclick="if(confirm('Apagar TODOS os preços?')){PRECOS_DB={};salvarPrecos();atualizarStats();toast('Preços apagados','ok');fecharTudo();}">🗑️ Limpar Todos os Preços</button>
   </div>
   <input type="file" id="f-excel" accept=".xlsx,.xls,.csv" style="display:none">
   <input type="file" id="f-fotos" multiple accept="image/*" style="display:none">
+  <input type="file" id="f-import" accept=".json" style="display:none">
+</div>
+
+
+<!-- MODAL WHATSAPP -->
+<div class="modal-bg" id="wa-modal-bg">
+  <div class="modal-card">
+    <div class="mhandle"></div>
+    <div style="font-size:17px;font-weight:700;margin-bottom:4px;text-align:center">💬 Enviar por WhatsApp</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:18px;text-align:center">Introduza o número ou escolha dos contactos</div>
+    <div style="font-size:10px;color:var(--a);text-transform:uppercase;letter-spacing:0.5px;font-weight:700;margin-bottom:6px;">Número de telemóvel</div>
+    <div style="display:flex;gap:8px;margin-bottom:6px;">
+      <input type="text" id="wa-prefix" value="+351" style="width:70px;background:var(--s2);border:1.5px solid var(--bd);border-radius:8px;padding:12px 8px;color:var(--text);font-size:15px;font-family:Inter,sans-serif;text-align:center;outline:none;flex-shrink:0;">
+      <input type="tel" id="wa-num" placeholder="912 345 678" inputmode="numeric" style="flex:1;background:rgba(201,168,76,0.06);border:2px solid var(--a);border-radius:8px;padding:12px;color:var(--a);font-size:20px;font-weight:700;font-family:'JetBrains Mono',monospace;text-align:center;outline:none;" onkeydown="if(event.key==='Enter')enviarWhatsApp()">
+    </div>
+    <div style="font-size:10px;color:var(--muted);margin-bottom:14px;text-align:center">O ficheiro JSON será descarregado — depois partilhe-o na conversa do WhatsApp</div>
+    <div style="display:flex;gap:10px;">
+      <button onclick="enviarWhatsApp()" style="flex:1;padding:14px;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;background:#25D366;color:#fff;">📲 Abrir WhatsApp</button>
+      <button onclick="document.getElementById('wa-modal-bg').classList.remove('open')" style="flex:1;padding:14px;border:1px solid var(--bd);border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;background:var(--s2);color:var(--text);">✕ Cancelar</button>
+    </div>
+  </div>
 </div>
 
 <!-- SCANNER MODAL (câmara + manual) -->
@@ -1126,6 +1151,102 @@ let toastTm;
 function toast(msg,tipo){const el=document.getElementById('toast');el.textContent=msg;el.className='toast show'+(tipo?' '+tipo:'');clearTimeout(toastTm);toastTm=setTimeout(()=>el.classList.remove('show'),3000);}
 
 // ══ EXPORTAR ══
+
+// ══ SINCRONIZAÇÃO JSON ══
+function gerarPayloadJSON(){
+  return JSON.stringify({
+    v:1,
+    ts:new Date().toISOString(),
+    fornecedores:FORNECEDORES,
+    precos:PRECOS_DB
+  });
+}
+
+function exportarJSON(){
+  if(!Object.keys(PRECOS_DB).length){toast('Sem preços para exportar','err');return;}
+  const blob=new Blob([gerarPayloadJSON()],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  const d=new Date();
+  const ds=d.toISOString().split('T')[0]+'_'+d.toTimeString().slice(0,5).replace(':','h');
+  a.download='PriceCheck_'+ds+'.json';
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+  toast('✓ Ficheiro JSON exportado','ok');
+}
+
+let _waPayload=null;
+function exportarEWhatsApp(){
+  if(!Object.keys(PRECOS_DB).length){toast('Sem preços para exportar','err');return;}
+  // Descarregar ficheiro primeiro
+  const blob=new Blob([gerarPayloadJSON()],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  const d=new Date();
+  const ds=d.toISOString().split('T')[0]+'_'+d.toTimeString().slice(0,5).replace(':','h');
+  a.download='PriceCheck_'+ds+'.json';
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+  // Abrir modal whatsapp
+  document.getElementById('wa-num').value='';
+  document.getElementById('wa-modal-bg').classList.add('open');
+  setTimeout(()=>document.getElementById('wa-num').focus(),200);
+}
+
+function enviarWhatsApp(){
+  const prefix=document.getElementById('wa-prefix').value.trim().replace(/\s/g,'');
+  const num=document.getElementById('wa-num').value.trim().replace(/[\s\-\(\)]/g,'');
+  if(!num){toast('Introduza um número','err');return;}
+  const numFull=(prefix+num).replace(/^\+/,'');
+  const msg=encodeURIComponent('📦 PriceCheck — ficheiro de sincronização de preços. Abre a app e usa "Importar Preços (JSON)" para atualizar os dados.');
+  window.open('https://wa.me/'+numFull+'?text='+msg,'_blank');
+  document.getElementById('wa-modal-bg').classList.remove('open');
+  toast('WhatsApp aberto — partilhe o ficheiro na conversa','ok');
+}
+
+// Importar JSON com merge inteligente
+document.getElementById('f-import').onchange=function(e){
+  const file=e.target.files[0];if(!file)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      const data=JSON.parse(ev.target.result);
+      if(!data.precos){toast('Ficheiro inválido','err');return;}
+      // Merge fornecedores: adicionar os que não existem
+      let fornAdded=0;
+      if(data.fornecedores&&Array.isArray(data.fornecedores)){
+        data.fornecedores.forEach(f=>{
+          const existe=FORNECEDORES.find(x=>String(x.id)===String(f.id)||x.nome===f.nome);
+          if(!existe){FORNECEDORES.push(f);fornAdded++;}
+        });
+        if(fornAdded)salvarForn();
+      }
+      // Merge preços: adicionar entradas novas (não duplicar)
+      let precosAdded=0;
+      Object.keys(data.precos).forEach(cod=>{
+        if(!PRECOS_DB[cod])PRECOS_DB[cod]={};
+        Object.keys(data.precos[cod]).forEach(fid=>{
+          if(!PRECOS_DB[cod][fid])PRECOS_DB[cod][fid]=[];
+          const existentes=PRECOS_DB[cod][fid].map(x=>x.data+'|'+x.preco);
+          data.precos[cod][fid].forEach(entrada=>{
+            const key=entrada.data+'|'+entrada.preco;
+            if(!existentes.includes(key)){
+              PRECOS_DB[cod][fid].push(entrada);
+              precosAdded++;
+            }
+          });
+        });
+      });
+      salvarPrecos();atualizarStats();
+      toast('✓ Merge: +'+precosAdded+' preços, +'+fornAdded+' fornecedores','ok');
+    }catch(err){toast('Erro ao importar: '+err.message,'err');}
+    e.target.value='';
+  };
+  r.readAsText(file);
+};
+
 function exportarComparativo(){
   const cods=Object.keys(PRECOS_DB);if(!cods.length){toast('Sem dados','err');return;}
   const fids=[...new Set(cods.flatMap(cod=>Object.keys(PRECOS_DB[cod])))];
@@ -1173,7 +1294,7 @@ function exportarHistorico(){
   carregar();atualizarHeaderForn();atualizarStats();
   setTimeout(abrirScanner,400);
 })();
-['pmodal-bg','nmodal-bg','hmodal-bg','fmodal-bg','em-modal-bg'].forEach(id=>{
+['pmodal-bg','nmodal-bg','hmodal-bg','fmodal-bg','em-modal-bg','wa-modal-bg'].forEach(id=>{
   document.getElementById(id).addEventListener('click',function(e){
     if(e.target===this){this.classList.remove('open');if(id==='fmodal-bg')fecharFornModal();}
   });
