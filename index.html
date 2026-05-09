@@ -190,14 +190,14 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
 .cact-btn{flex:1;padding:10px;border:1px solid var(--bd);border-radius:var(--r8);background:var(--s1);color:var(--text);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;font-family:'Inter',sans-serif;}
 .cwrap{padding:0 12px 20px;overflow-x:auto;}
 .ctable{width:100%;border-collapse:collapse;min-width:380px;}
-.ctable th{background:var(--s1);padding:9px 10px;font-size:9px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--bd);text-align:left;white-space:nowrap;}
-.ctable td{padding:9px 10px;border-bottom:1px solid rgba(255,255,255,0.025);font-size:12px;vertical-align:middle;}
+.ctable th{background:var(--s1);padding:6px 6px;font-size:9px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--bd);text-align:left;white-space:nowrap;}
+.ctable td{padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.025);font-size:12px;vertical-align:top;}
 .ctable tr.cr{cursor:pointer;}
 .ctable tr.cr:hover td{background:rgba(255,255,255,0.015);}
 .ctd-n{font-weight:600;max-width:110px;overflow-wrap:break-word;word-break:break-word;line-height:1.3;}
 .cmono{font-family:'JetBrains Mono',monospace;font-weight:600;}
 .cbest{color:var(--a2);}.cworst{color:var(--danger);}
-.cvar{font-size:9px;padding:2px 5px;border-radius:4px;font-weight:700;margin-top:2px;display:inline-block;}
+.cvar{font-size:9px;padding:2px 4px;border-radius:4px;font-weight:700;display:inline-block;vertical-align:middle;}
 .cv-p{background:rgba(16,185,129,0.1);color:var(--a2);}
 .cv-n{background:rgba(239,68,68,0.1);color:var(--danger);}
 .cdiff{font-size:11px;padding:3px 7px;border-radius:5px;font-weight:700;white-space:nowrap;}
@@ -629,23 +629,41 @@ async function iniciarCamera(){
   try{
     const sel=document.getElementById('scan-sel');
     const selVal=sel.value&&sel.value.length>10?sel.value:null;
-    // Tenta sempre back camera primeiro (camera 0 = environment)
-    let constraints=selVal
-      ?{video:{deviceId:{exact:selVal}},audio:false}
+    let deviceIdToUse=selVal;
+    // Se não há câmara seleccionada, enumerar e escolher a PRIMEIRA back camera
+    if(!deviceIdToUse){
+      try{
+        // Pedimos acesso temporário para obter labels
+        const tmp=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
+        tmp.getTracks().forEach(t=>t.stop());
+        const devices=await navigator.mediaDevices.enumerateDevices();
+        camerasDisponiveis=devices.filter(d=>d.kind==='videoinput');
+        // Procurar câmara com 'back' ou 'traseira' no label; senão usar a última (index 0 em Android = front, last = back)
+        const backCam=camerasDisponiveis.find(c=>/(back|rear|traseira|environment|0)/i.test(c.label))
+          ||camerasDisponiveis[camerasDisponiveis.length-1];
+        if(backCam&&backCam.deviceId)deviceIdToUse=backCam.deviceId;
+      }catch(e){}
+    }
+    const constraints=deviceIdToUse
+      ?{video:{deviceId:{exact:deviceIdToUse},width:{ideal:1920},height:{ideal:1080}},audio:false}
       :{video:{facingMode:'environment',width:{ideal:1920},height:{ideal:1080}},audio:false};
     try{streamAtual=await navigator.mediaDevices.getUserMedia(constraints);}
     catch(e1){
-      // fallback: qualquer câmera disponível
-      try{streamAtual=await navigator.mediaDevices.getUserMedia({video:true,audio:false});}
-      catch(e2){throw e2;}
+      try{streamAtual=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});}
+      catch(e2){
+        try{streamAtual=await navigator.mediaDevices.getUserMedia({video:true,audio:false});}
+        catch(e3){throw e3;}
+      }
     }
     try{
-      const devices=await navigator.mediaDevices.enumerateDevices();
-      camerasDisponiveis=devices.filter(d=>d.kind==='videoinput');
+      if(!camerasDisponiveis.length){
+        const devices=await navigator.mediaDevices.enumerateDevices();
+        camerasDisponiveis=devices.filter(d=>d.kind==='videoinput');
+      }
       const trackLabel=(streamAtual.getVideoTracks()[0]?.label||'').toLowerCase();
       sel.innerHTML=camerasDisponiveis.map((c,i)=>{
         const lbl=c.label||'Câmera '+(i+1);
-        const s2=trackLabel&&c.label&&trackLabel===c.label.toLowerCase();
+        const s2=trackLabel&&c.label&&c.label.toLowerCase()===trackLabel;
         return`<option value="${c.deviceId}"${s2?' selected':''}>${lbl}</option>`;
       }).join('');
     }catch(e){sel.innerHTML='<option value="">Câmera ativa</option>';}
@@ -1014,14 +1032,14 @@ function renderComparativo(){
     const ce=cod.replace(/'/g,"\\'");
     html+=`<tr class="cr" onclick="mostrarProdModal(DADOS.find(x=>getCod(x)==='${ce}')||null)">
       <td class="ctd-n" title="${np}">${np}</td>
-      <td class="cmono">${pr>0?pr.toFixed(2)+'€':'—'}</td>
+      <td style="white-space:nowrap" class="cmono">${pr>0?pr.toFixed(2)+'€':'—'}</td>
       ${ppf.map(item=>{
         if(!item)return'<td style="color:var(--muted);text-align:center">—</td>';
         const p=item.preco;
         const ib=p===minP&&vals.length>1,iw=p===maxP&&vals.length>1;
         let vp='';
-        if(pr>0){const d=p-pr;const pc=((d/pr)*100).toFixed(0);if(Math.abs(d)>0.005)vp=`<div class="cvar ${d<0?'cv-p':'cv-n'}">${d>0?'+':''}${pc}%</div>`;}
-        return`<td><div class="cmono ${ib?'cbest':iw?'cworst':''}">${p.toFixed(2)}€</div>${vp}</td>`;
+        if(pr>0){const d=p-pr;const pc=((d/pr)*100).toFixed(0);if(Math.abs(d)>0.005)vp=`<span class="cvar ${d<0?'cv-p':'cv-n'}" style="margin-left:3px">${d>0?'+':''}${pc}%</span>`;}
+        return`<td style="white-space:nowrap"><span class="cmono ${ib?'cbest':iw?'cworst':''}">${p.toFixed(2)}€</span>${vp}</td>`;
       }).join('')}
       <td>${diff!=null&&vals.length>1?`<span class="cdiff ${dc}">${diff.toFixed(2)}€</span>`:'—'}</td>
     </tr>`;
