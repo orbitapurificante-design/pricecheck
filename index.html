@@ -27,7 +27,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
 .hlogo{font-size:16px;font-weight:800;letter-spacing:-0.3px;color:var(--text);white-space:nowrap;}
 .hlogo span{color:var(--a);}
 .hdate{font-size:11px;color:var(--muted);margin-left:6px;font-weight:500;}
-.hbadge-sair{background:rgba(201,168,76,0.15);border:1px solid rgba(201,168,76,0.3);color:var(--a);font-size:10px;font-weight:700;padding:4px 10px;border-radius:5px;cursor:pointer;margin-left:auto;letter-spacing:0.5px;}
+
 .hrow2{display:flex;align-items:center;gap:8px;padding:0 14px 10px;}
 .hforn{flex:1;background:rgba(255,255,255,0.05);border:1px solid var(--bd2);border-radius:var(--r8);padding:7px 11px;color:var(--text);font-weight:600;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:7px;min-width:0;overflow:hidden;transition:background 0.15s;}
 .hforn:active{background:var(--s3);}
@@ -273,10 +273,9 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
 <!-- HEADER -->
 <header>
   <div class="hrow1">
-    <button class="hmenu" onclick="toggleDrawer()">☰</button>
     <div class="hlogo">Price<span>Check</span> · Pro</div>
     <span class="hdate" id="hdate"></span>
-    <div class="hbadge-sair" onclick="toggleDrawer()">MENU</div>
+    <button class="hmenu" onclick="toggleDrawer()">⋯</button>
   </div>
   <div class="hrow2">
     <div class="hforn sem" id="hforn" onclick="nav('m4')">
@@ -409,10 +408,6 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
       <button class="scan-sub-btn" onclick="document.getElementById('f-excel').click()"><span>📊</span> EXCEL</button>
     </div>
   </div>
-
-  <!-- Dados do documento -->
-  <div class="dados-section">
-    <div class="dados-lbl">DADOS DO DOCUMENTO</div>
     <div class="dados-field">
       <div class="dados-field-lbl">COLABORADOR</div>
       <input type="text" id="doc-colab" placeholder="🔑 Administrador" value="">
@@ -475,21 +470,55 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
   </button>
   <button class="bnav-btn" id="nb-m2" onclick="nav('m2')">
     <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-    FATURAS
+    PRODUTOS
   </button>
   <button class="bnav-btn" id="nb-m3" onclick="nav('m3')">
     <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-    CLIENTES
+    RELATÓRIO
   </button>
   <button class="bnav-btn" id="nb-m4" onclick="nav('m4')">
     <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-    RELATÓRIO
+    FORNECEDORES
   </button>
 </div>
 
 <script>
 // ══ ESTADO ══
-let DADOS=[],IMGS=new Map(),FORNECEDORES=[],FORN_ATIVO=null,PRECOS_DB={},FAM_ESTADOS={};
+// ══ INDEXEDDB PARA FOTOS (persistência entre sessões) ══
+let IMGS=new Map();
+const IMG_DB_NAME='PriceCheckImgs',IMG_STORE='fotos';
+let imgDB=null;
+async function abrirImgDB(){
+  return new Promise((res,rej)=>{
+    const req=indexedDB.open(IMG_DB_NAME,1);
+    req.onupgradeneeded=e=>{e.target.result.createObjectStore(IMG_STORE);};
+    req.onsuccess=e=>{imgDB=e.target.result;res(imgDB);};
+    req.onerror=()=>rej(req.error);
+  });
+}
+async function salvarImgDB(key,data){
+  if(!imgDB)await abrirImgDB();
+  return new Promise((res,rej)=>{
+    const tx=imgDB.transaction(IMG_STORE,'readwrite');
+    tx.objectStore(IMG_STORE).put(data,key);
+    tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error);
+  });
+}
+async function carregarTodasImgsDB(){
+  if(!imgDB)await abrirImgDB();
+  return new Promise((res,rej)=>{
+    const tx=imgDB.transaction(IMG_STORE,'readonly');
+    const st=tx.objectStore(IMG_STORE);
+    const keys=[],vals=[];
+    st.openCursor().onsuccess=e=>{
+      const c=e.target.result;
+      if(c){keys.push(c.key);vals.push(c.value);c.continue();}
+      else{keys.forEach((k,i)=>IMGS.set(k,vals[i]));res();}
+    };
+    tx.onerror=()=>rej(tx.error);
+  });
+}
+let DADOS=[],FORNECEDORES=[],FORN_ATIVO=null,PRECOS_DB={},FAM_ESTADOS={};
 let COD_ATUAL=null,FORN_EDIT_ID=null,COMP_CAT='todos',FORN_NEXT_ID=Date.now();
 
 // ══ DATA HEADER ══
@@ -553,20 +582,27 @@ document.getElementById('f-excel').onchange=function(e){
   r.readAsArrayBuffer(file);
 };
 
-document.getElementById('f-fotos').onchange=function(e){
+document.getElementById('f-fotos').onchange=async function(e){
   const files=Array.from(e.target.files);if(!files.length)return;
   let n=0;
-  files.forEach(file=>{
-    const r=new FileReader();
-    r.onload=ev=>{
-      const nl=file.name.toLowerCase(),semExt=nl.replace(/\.[^.]+$/,'');
-      IMGS.set(nl,ev.target.result);IMGS.set(semExt,ev.target.result);
-      n++;if(n===files.length)toast('✓ '+files.length+' fotos carregadas','ok');
-    };
-    r.readAsDataURL(file);
-  });
+  for(const file of files){
+    await new Promise(res=>{
+      const r=new FileReader();
+      r.onload=async ev=>{
+        const nl=file.name.toLowerCase(),semExt=nl.replace(/\.[^.]+$/,'');
+        IMGS.set(nl,ev.target.result);IMGS.set(semExt,ev.target.result);
+        try{await salvarImgDB(nl,ev.target.result);await salvarImgDB(semExt,ev.target.result);}catch(err){}
+        n++;res();
+      };
+      r.readAsDataURL(file);
+    });
+  }
+  if(m2Ativo())renderProdutos();
+  toast('✓ '+files.length+' fotos carregadas e guardadas','ok');
   e.target.value='';
 };
+function m2Ativo(){return document.getElementById('m2').classList.contains('active');}
+
 
 function getImg(p){
   if(!p)return'';
@@ -614,14 +650,16 @@ async function iniciarCamera(){
   setScanStatus('A iniciar câmera...','');
   try{
     const sel=document.getElementById('scan-sel');
-    const deviceId=sel.value&&sel.value.length>5?sel.value:null;
-    const constraints=deviceId
-      ?{video:{deviceId:{exact:deviceId}},audio:false}
-      :{video:{facingMode:{exact:'environment'},width:{ideal:1280},height:{ideal:720}},audio:false};
+    const selVal=sel.value&&sel.value.length>10?sel.value:null;
+    // Tenta sempre back camera primeiro (camera 0 = environment)
+    let constraints=selVal
+      ?{video:{deviceId:{exact:selVal}},audio:false}
+      :{video:{facingMode:'environment',width:{ideal:1920},height:{ideal:1080}},audio:false};
     try{streamAtual=await navigator.mediaDevices.getUserMedia(constraints);}
     catch(e1){
-      if(!deviceId){streamAtual=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280}},audio:false});}
-      else throw e1;
+      // fallback: qualquer câmera disponível
+      try{streamAtual=await navigator.mediaDevices.getUserMedia({video:true,audio:false});}
+      catch(e2){throw e2;}
     }
     try{
       const devices=await navigator.mediaDevices.enumerateDevices();
@@ -921,6 +959,10 @@ function apagarHist(cod,fid,idx,nf,np){
 
 // ══ PRODUTOS M2 ══
 function renderProdutos(){
+  // Render diferido para não bloquear a UI
+  if(window._prodTimer)clearTimeout(window._prodTimer);
+  window._prodTimer=setTimeout(_doRenderProdutos,0);}
+function _doRenderProdutos(){
   const busca=(document.getElementById('in-busca').value||'').toLowerCase().trim();
   const c=document.getElementById('produtos-lista');
   if(!DADOS.length){c.innerHTML=`<div class="empty"><div class="empty-ico">📊</div><div class="empty-title">Sem catálogo</div><div class="empty-sub">Use o menu ☰ para carregar o Excel</div></div>`;return;}
@@ -960,6 +1002,7 @@ function renderProdutos(){
   if(!html)html=`<div class="empty"><div class="empty-ico">🔍</div><div class="empty-title">Sem resultados</div></div>`;
   c.innerHTML=html;
 }
+} // end _doRenderProdutos
 function toggleFam(cat){FAM_ESTADOS[cat]=!FAM_ESTADOS[cat];renderProdutos();}
 
 // ══ COMPARATIVO M3 ══
@@ -1134,7 +1177,11 @@ function exportarHistorico(){
 }
 
 // ══ INIT ══
-carregar();atualizarHeaderForn();atualizarStats();
+(async()=>{
+  await abrirImgDB();
+  await carregarTodasImgsDB();
+  carregar();atualizarHeaderForn();atualizarStats();
+})();
 ['pmodal-bg','nmodal-bg','hmodal-bg','fmodal-bg','em-modal-bg'].forEach(id=>{
   document.getElementById(id).addEventListener('click',function(e){
     if(e.target===this){this.classList.remove('open');if(id==='fmodal-bg')fecharFornModal();}
