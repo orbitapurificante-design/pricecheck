@@ -548,7 +548,7 @@ function nav(id){
   document.getElementById(id).classList.add('active');
   const nb=document.getElementById('nb-'+id);if(nb)nb.classList.add('active');
   fecharDrawer();
-  if(id==='m1'){atualizarStats();atualizarDocForn();}
+  if(id==='m1'){atualizarStats();}
   if(id==='m2')renderProdutos();
   if(id==='m3')renderComparativo();
   if(id==='m4')renderFornecedores();
@@ -1002,7 +1002,6 @@ function _doRenderProdutos(){
   if(!html)html=`<div class="empty"><div class="empty-ico">🔍</div><div class="empty-title">Sem resultados</div></div>`;
   c.innerHTML=html;
 }
-} // end _doRenderProdutos
 function toggleFam(cat){FAM_ESTADOS[cat]=!FAM_ESTADOS[cat];renderProdutos();}
 
 // ══ COMPARATIVO M3 ══
@@ -1082,11 +1081,6 @@ function atualizarHeaderForn(){
   const hf=document.getElementById('hforn'),hn=document.getElementById('hforn-nome');
   if(FORN_ATIVO){hf.className='hforn ativo';hn.textContent=FORN_ATIVO.nome;}
   else{hf.className='hforn sem';hn.textContent='Selecionar fornecedor';}
-  atualizarDocForn();
-}
-function atualizarDocForn(){
-  const df=document.getElementById('doc-forn');
-  if(df)df.value=FORN_ATIVO?FORN_ATIVO.nome:'';
 }
 function abrirFornModal(id){
   FORN_EDIT_ID=id||null;
