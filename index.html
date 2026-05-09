@@ -7,7 +7,35 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0f1117">
-<link rel="manifest" href="manifest.json">
+<script>
+// Manifest inline com start_url dinâmico — funciona em qualquer subpath
+(function(){
+  var base = location.href.replace(/\/index\.html.*$/, '/').replace(/\?.*$/, '');
+  var scope = location.pathname.replace(/index\.html$/, '').replace(/[^/]*$/, '') || '/';
+  var m = {
+    name: "PriceCheck Pro",
+    short_name: "PriceCheck",
+    description: "Verificação de preços de fornecedores",
+    start_url: base,
+    scope: scope,
+    display: "standalone",
+    background_color: "#0f1117",
+    theme_color: "#0f1117",
+    orientation: "portrait",
+    icons: [{
+      src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='40' fill='%230f1117'/%3E%3Ccircle cx='96' cy='96' r='78' fill='%233b82f6'/%3E%3Ctext x='96' y='128' font-size='88' text-anchor='middle'%3E%F0%9F%92%B0%3C/text%3E%3C/svg%3E",
+      sizes: "192x192",
+      type: "image/svg+xml",
+      purpose: "any maskable"
+    }]
+  };
+  var blob = new Blob([JSON.stringify(m)], {type:'application/manifest+json'});
+  var link = document.createElement('link');
+  link.rel = 'manifest';
+  link.href = URL.createObjectURL(blob);
+  document.head.appendChild(link);
+})();
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
@@ -497,7 +525,13 @@ function instalarPWA(){if(deferredInstallPrompt){deferredInstallPrompt.prompt();
 
 // Registar service worker
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('sw.js').catch(()=>{});
+  // Registar SW com path correto (funciona em GitHub Pages e localhost)
+  var swPath = location.pathname.replace(/index\.html$/, '').replace(/[^/]*$/, '') + 'sw.js';
+  navigator.serviceWorker.register(swPath).then(function(reg){
+    console.log('SW registado:', reg.scope);
+  }).catch(function(err){
+    console.log('SW erro:', err);
+  });
 }
 
 // ══ ÁUDIO BIPE ══
