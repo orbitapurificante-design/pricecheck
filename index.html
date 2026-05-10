@@ -257,6 +257,49 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
 
 /* MENU BTN */
 .hmenu{background:transparent;border:none;color:var(--text);font-size:20px;cursor:pointer;padding:4px;flex-shrink:0;line-height:1;}
+
+/* ── ENCOMENDAS M5 ── */
+#m5{background:var(--bg);}
+.enc-top{padding:14px 14px 6px;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.enc-title{font-size:19px;font-weight:800;letter-spacing:-0.5px;}
+.enc-sub{font-size:12px;color:var(--muted);margin-top:2px;}
+.enc-scan-btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:12px 16px;background:linear-gradient(135deg,var(--a),var(--ag));border:none;border-radius:var(--r12);color:#1a2340;font-size:13px;font-weight:800;cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap;box-shadow:0 4px 16px rgba(201,168,76,0.25);}
+.enc-scan-btn:active{transform:scale(0.97);}
+.enc-forn-sel{margin:0 12px 10px;padding:10px 14px;background:var(--navy);border:1px solid rgba(201,168,76,0.2);border-radius:var(--r12);display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600;}
+.enc-forn-sel.ok{border-color:rgba(201,168,76,0.4);color:var(--a);}
+.enc-forn-sel.sem{color:var(--muted);}
+.enc-forn-dot{width:8px;height:8px;border-radius:50%;background:var(--a2);flex-shrink:0;}
+.enc-forn-sel.sem .enc-forn-dot{background:var(--muted);}
+.enc-empty{text-align:center;padding:50px 20px;color:var(--muted);}
+.enc-empty-ico{font-size:44px;margin-bottom:12px;}
+.enc-empty-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px;}
+.enc-empty-sub{font-size:12px;line-height:1.6;}
+.enc-list{padding:0 12px 12px;}
+.enc-item{background:var(--card);border:1px solid var(--bd);border-radius:var(--r12);margin-bottom:8px;overflow:hidden;}
+.enc-item-row{display:flex;align-items:center;gap:10px;padding:12px;}
+.enc-item-img{width:46px;height:46px;object-fit:contain;border-radius:var(--r8);background:#fff;flex-shrink:0;border:1px solid var(--bd);}
+.enc-item-img-e{width:46px;height:46px;border-radius:var(--r8);background:var(--s2);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.enc-item-info{flex:1;min-width:0;}
+.enc-item-nome{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.enc-item-cod{font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-top:2px;}
+.enc-item-qtd-wrap{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.enc-qtd-btn{width:30px;height:30px;border:none;border-radius:8px;background:var(--s2);color:var(--text);font-size:18px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;}
+.enc-qtd-btn:active{background:var(--s3);}
+.enc-qtd-inp{width:48px;background:rgba(201,168,76,0.08);border:1.5px solid var(--a);border-radius:8px;padding:5px 4px;color:var(--a);font-size:16px;font-weight:800;font-family:'JetBrains Mono',monospace;text-align:center;outline:none;}
+.enc-item-del{background:none;border:none;color:var(--danger);font-size:18px;cursor:pointer;padding:4px 6px;border-radius:6px;flex-shrink:0;}
+.enc-acoes{margin:0 12px 14px;display:flex;gap:8px;}
+.enc-act{flex:1;padding:12px;border:none;border-radius:var(--r12);font-size:13px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;}
+.enc-act-imp{background:var(--a2);color:#fff;}
+.enc-act-del{background:rgba(239,68,68,0.08);color:var(--danger);border:1px solid rgba(239,68,68,0.15);}
+.enc-total{margin:0 12px 8px;background:var(--navy);border:1px solid rgba(201,168,76,0.2);border-radius:var(--r12);padding:12px 14px;display:flex;align-items:center;justify-content:space-between;}
+.enc-total-lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;font-weight:700;}
+.enc-total-val{font-size:22px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--a);}
+
+/* SCANNER ENCOMENDAS (contínuo) */
+#enc-scan-modal{display:none;position:fixed;inset:0;z-index:9500;background:#000;flex-direction:column;}
+.enc-scan-badge{position:absolute;top:14px;left:14px;background:rgba(201,168,76,0.92);color:#1a2340;font-size:11px;font-weight:800;padding:5px 12px;border-radius:20px;letter-spacing:0.5px;}
+.enc-scan-count{position:absolute;top:14px;right:14px;background:rgba(16,185,129,0.92);color:#fff;font-size:11px;font-weight:800;padding:5px 12px;border-radius:20px;}
+.enc-scan-last{position:absolute;bottom:10px;left:0;right:0;text-align:center;font-size:11px;color:rgba(255,255,255,0.5);letter-spacing:0.5px;}
 </style>
 </head>
 <body>
@@ -465,6 +508,62 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
   <div class="flist" id="forn-list"></div>
 </div>
 
+<!-- ENCOMENDAS -->
+<div class="screen" id="m5">
+  <div class="enc-top">
+    <div>
+      <div class="enc-title">📦 Encomendas</div>
+      <div class="enc-sub" id="enc-sub">Leituras para o fornecedor ativo</div>
+    </div>
+    <button class="enc-scan-btn" onclick="abrirEncScanner()">
+      <span style="font-size:17px">📷</span> SCAN
+    </button>
+  </div>
+  <div class="enc-forn-sel sem" id="enc-forn-sel">
+    <div class="enc-forn-dot"></div>
+    <span id="enc-forn-nome">Nenhum fornecedor selecionado</span>
+    <button onclick="nav('m4')" style="margin-left:auto;background:var(--s2);border:1px solid var(--bd);color:var(--muted);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'Inter',sans-serif;">Selecionar</button>
+  </div>
+  <div id="enc-lista-wrap">
+    <div class="enc-empty">
+      <div class="enc-empty-ico">📋</div>
+      <div class="enc-empty-title">Encomenda vazia</div>
+      <div class="enc-empty-sub">Pressione SCAN para começar<br>a ler artigos para a encomenda</div>
+    </div>
+  </div>
+</div>
+
+<!-- SCANNER CONTÍNUO ENCOMENDAS -->
+<div id="enc-scan-modal" style="display:none;position:fixed;inset:0;z-index:9500;background:#000;flex-direction:column;">
+  <div id="enc-scan-vwrap" style="flex:1;position:relative;overflow:hidden;background:#000;">
+    <video id="enc-scan-video" playsinline autoplay muted style="width:100%;height:100%;object-fit:cover;display:block;"></video>
+    <div class="enc-scan-badge" id="enc-scan-badge">📦 ENCOMENDA</div>
+    <div class="enc-scan-count" id="enc-scan-count">0 artigos</div>
+    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-55%);width:70vw;max-width:280px;height:160px;border-radius:16px;box-shadow:0 0 0 4000px rgba(0,0,0,0.6);">
+      <div style="position:absolute;inset:-2px;border-radius:18px;border:2.5px solid #c9a84c;"></div>
+      <div style="position:absolute;width:22px;height:22px;top:-2px;left:-2px;border-top:3px solid #c9a84c;border-left:3px solid #c9a84c;border-radius:4px 0 0 0;"></div>
+      <div style="position:absolute;width:22px;height:22px;top:-2px;right:-2px;border-top:3px solid #c9a84c;border-right:3px solid #c9a84c;border-radius:0 4px 0 0;"></div>
+      <div style="position:absolute;width:22px;height:22px;bottom:-2px;left:-2px;border-bottom:3px solid #c9a84c;border-left:3px solid #c9a84c;border-radius:0 0 0 4px;"></div>
+      <div style="position:absolute;width:22px;height:22px;bottom:-2px;right:-2px;border-bottom:3px solid #c9a84c;border-right:3px solid #c9a84c;border-radius:0 0 4px 0;"></div>
+      <div id="enc-scan-line" style="position:absolute;left:5%;right:5%;height:2px;background:linear-gradient(90deg,transparent,#c9a84c,transparent);animation:sl 2s ease-in-out infinite;"></div>
+    </div>
+    <div class="enc-scan-last" id="enc-scan-last">Aponte para o código de barras</div>
+  </div>
+  <div id="enc-scan-flash" style="position:absolute;inset:0;background:rgba(16,185,129,0.25);opacity:0;pointer-events:none;transition:opacity 0.15s;"></div>
+  <div style="padding:12px 16px 20px;background:#1a2340;border-top:1px solid rgba(201,168,76,0.2);">
+    <div id="enc-scan-status" style="text-align:center;font-size:12px;min-height:18px;margin-bottom:8px;font-weight:500;color:#7a8fba;"></div>
+    <div style="display:flex;gap:8px;margin-bottom:8px;">
+      <select id="enc-scan-sel" style="flex:1;background:#1e2a4a;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:9px 12px;color:#f1f5f9;font-size:12px;font-family:Inter,sans-serif;outline:none;" onchange="encTrocarCamera()"><option>A iniciar...</option></select>
+      <button onclick="encFlipCamera()" style="width:40px;height:40px;background:#1e2a4a;border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#f1f5f9;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">🔄</button>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <input type="text" id="enc-scan-input" style="flex:1;background:#1e2a4a;border:1.5px solid rgba(255,255,255,0.1);border-radius:8px;padding:10px 14px;color:#f1f5f9;font-size:15px;font-family:'JetBrains Mono',monospace;text-align:center;outline:none;" placeholder="Código manual..." inputmode="numeric" onkeydown="if(event.key==='Enter')encConfirmarManual()">
+      <button onclick="encConfirmarManual()" style="padding:10px 14px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;background:#c9a84c;color:#1a2340;">✓</button>
+      <button onclick="fecharEncScanner()" style="padding:10px 16px;border:1px solid rgba(255,255,255,0.1);border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;background:#1e2a4a;color:#f1f5f9;">✕ Fechar</button>
+    </div>
+  </div>
+</div>
+
 <!-- BOTTOM NAV -->
 <div class="bnav">
   <button class="bnav-btn active" id="nb-m1" onclick="nav('m1')">
@@ -482,6 +581,10 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
   <button class="bnav-btn" id="nb-m4" onclick="nav('m4')">
     <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
     FORNECEDORES
+  </button>
+  <button class="bnav-btn" id="nb-m5" onclick="nav('m5')">
+    <svg viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+    ENCOMENDAS
   </button>
 </div>
 
@@ -555,6 +658,7 @@ function nav(id){
   if(id==='m2')renderProdutos();
   if(id==='m3')renderComparativo();
   if(id==='m4')renderFornecedores();
+  if(id==='m5'){atualizarEncHeader();renderEncomenda();}
   window.scrollTo(0,0);
 }
 function fecharTudo(){fecharDrawer();}
@@ -1287,11 +1391,375 @@ function exportarHistorico(){
   toast('✓ Exportado!','ok');
 }
 
+// ══ ENCOMENDAS ══
+// Estrutura: ENCOMENDAS = { fornId: [ {cod, nome, qtd, un, preco}, ... ] }
+let ENCOMENDAS = {};
+let encScannerAberto = false;
+let encStreamAtual = null, encScanLoopId = null, encLastCode = null;
+let encZxingReader = null, encBarcodeDetector = null;
+let encCameraIndex = 0, encCamerasDisponiveis = [];
+
+function salvarEncomendas(){localStorage.setItem('PC_ENC',JSON.stringify(ENCOMENDAS));}
+function carregarEncomendas(){try{const d=localStorage.getItem('PC_ENC');if(d)ENCOMENDAS=JSON.parse(d);}catch(e){}}
+
+function atualizarEncHeader(){
+  const sel=document.getElementById('enc-forn-sel');
+  const nome=document.getElementById('enc-forn-nome');
+  const sub=document.getElementById('enc-sub');
+  if(FORN_ATIVO){
+    sel.className='enc-forn-sel ok';
+    nome.textContent=FORN_ATIVO.nome;
+    const items=ENCOMENDAS[FORN_ATIVO.id]||[];
+    const total=items.reduce((a,x)=>a+x.qtd,0);
+    sub.textContent=items.length+' artigo(s) · '+total+' und.';
+  }else{
+    sel.className='enc-forn-sel sem';
+    nome.textContent='Nenhum fornecedor selecionado';
+    sub.textContent='Selecione um fornecedor para começar';
+  }
+}
+
+function renderEncomenda(){
+  atualizarEncHeader();
+  const wrap=document.getElementById('enc-lista-wrap');
+  if(!FORN_ATIVO){
+    wrap.innerHTML=`<div class="enc-empty"><div class="enc-empty-ico">🏭</div><div class="enc-empty-title">Sem fornecedor ativo</div><div class="enc-empty-sub">Vá a Fornecedores e selecione um<br>para criar uma encomenda</div></div>`;return;
+  }
+  const items=ENCOMENDAS[FORN_ATIVO.id]||[];
+  if(!items.length){
+    wrap.innerHTML=`<div class="enc-empty"><div class="enc-empty-ico">📋</div><div class="enc-empty-title">Encomenda vazia</div><div class="enc-empty-sub">Pressione SCAN para começar<br>a ler artigos para a encomenda</div></div>`;return;
+  }
+  const totalUnd=items.reduce((a,x)=>a+x.qtd,0);
+  const totalVal=items.reduce((a,x)=>a+(x.preco||0)*x.qtd,0);
+  let html=`<div class="enc-list">`;
+  items.forEach((item,idx)=>{
+    const imgUrl=item.imgUrl||'';
+    const imgHtml=imgUrl?`<img src="${imgUrl}" class="enc-item-img" onerror="this.outerHTML='<div class=enc-item-img-e>📦</div>'">`:`<div class="enc-item-img-e">📦</div>`;
+    html+=`<div class="enc-item" id="enc-item-${idx}">
+      <div class="enc-item-row">
+        ${imgHtml}
+        <div class="enc-item-info">
+          <div class="enc-item-nome">${item.nome}</div>
+          <div class="enc-item-cod">${item.cod}${item.un?' · '+item.un:''}</div>
+        </div>
+        <div class="enc-item-qtd-wrap">
+          <button class="enc-qtd-btn" onclick="encAlterarQtd(${idx},-1)">−</button>
+          <input class="enc-qtd-inp" type="number" min="1" value="${item.qtd}" onchange="encSetQtd(${idx},this.value)" onclick="this.select()">
+          <button class="enc-qtd-btn" onclick="encAlterarQtd(${idx},1)">+</button>
+        </div>
+        <button class="enc-item-del" onclick="encApagarItem(${idx})" title="Remover">✕</button>
+      </div>
+    </div>`;
+  });
+  html+=`</div>`;
+  html+=`<div class="enc-total">
+    <div>
+      <div class="enc-total-lbl">Total unidades</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px">${items.length} artigo(s)</div>
+    </div>
+    <div class="enc-total-val">${totalUnd} und.</div>
+  </div>`;
+  if(totalVal>0){
+    html+=`<div style="margin:0 12px 8px;background:var(--navy);border:1px solid rgba(16,185,129,0.2);border-radius:var(--r12);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;font-weight:700;">Valor estimado</div>
+      <div style="font-size:18px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--a2);">${totalVal.toFixed(2)}€</div>
+    </div>`;
+  }
+  html+=`<div class="enc-acoes">
+    <button class="enc-act enc-act-imp" onclick="imprimirEncomenda()">🖨️ Imprimir</button>
+    <button class="enc-act enc-act-del" onclick="apagarEncomenda()">🗑️ Limpar tudo</button>
+  </div>`;
+  wrap.innerHTML=html;
+}
+
+function encAdicionarCodigo(codigo){
+  if(!FORN_ATIVO){toast('Selecione um fornecedor primeiro','err');return;}
+  const fid=FORN_ATIVO.id;
+  if(!ENCOMENDAS[fid])ENCOMENDAS[fid]=[];
+  const items=ENCOMENDAS[fid];
+  // Verificar se já existe
+  const exist=items.find(x=>x.cod===codigo);
+  if(exist){
+    exist.qtd++;
+    salvarEncomendas();
+    atualizarEncBadge();
+    encFlashLinha(exist);
+    toast('✓ '+exist.nome+' · '+exist.qtd+' und.','ok');
+    return;
+  }
+  // Procurar produto
+  const prod=findProd(codigo);
+  const nome=prod?prod.nome:('Cód. '+codigo);
+  const un=prod?prod.un:'';
+  const preco=prod?prod.preco:0;
+  const imgUrl=prod?getImg(prod):'';
+  items.push({cod:codigo,nome,un,preco,qtd:1,imgUrl});
+  salvarEncomendas();
+  atualizarEncBadge();
+  toast('+ '+nome,'ok');
+}
+
+function encFlashLinha(item){/* visual feedback já vem do scanner flash */}
+
+function atualizarEncBadge(){
+  const el=document.getElementById('enc-scan-count');
+  if(!el||!FORN_ATIVO)return;
+  const items=ENCOMENDAS[FORN_ATIVO.id]||[];
+  const total=items.reduce((a,x)=>a+x.qtd,0);
+  el.textContent=total+' und.';
+}
+
+function encAlterarQtd(idx,delta){
+  if(!FORN_ATIVO)return;
+  const items=ENCOMENDAS[FORN_ATIVO.id]||[];
+  if(!items[idx])return;
+  items[idx].qtd=Math.max(1,items[idx].qtd+delta);
+  salvarEncomendas();renderEncomenda();
+}
+function encSetQtd(idx,val){
+  if(!FORN_ATIVO)return;
+  const items=ENCOMENDAS[FORN_ATIVO.id]||[];
+  if(!items[idx])return;
+  const v=parseInt(val)||1;
+  items[idx].qtd=Math.max(1,v);
+  salvarEncomendas();renderEncomenda();
+}
+function encApagarItem(idx){
+  if(!FORN_ATIVO)return;
+  const items=ENCOMENDAS[FORN_ATIVO.id]||[];
+  if(!items[idx])return;
+  const nome=items[idx].nome;
+  items.splice(idx,1);
+  salvarEncomendas();renderEncomenda();
+  toast('Removido: '+nome,'ok');
+}
+function apagarEncomenda(){
+  if(!FORN_ATIVO)return;
+  if(!confirm('Apagar toda a encomenda de '+FORN_ATIVO.nome+'?'))return;
+  ENCOMENDAS[FORN_ATIVO.id]=[];
+  salvarEncomendas();renderEncomenda();
+  toast('Encomenda limpa','ok');
+}
+
+function imprimirEncomenda(){
+  if(!FORN_ATIVO)return;
+  const items=ENCOMENDAS[FORN_ATIVO.id]||[];
+  if(!items.length){toast('Encomenda vazia','err');return;}
+  const d=new Date();
+  const ds=d.toLocaleDateString('pt-PT')+' '+d.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'});
+  const totalUnd=items.reduce((a,x)=>a+x.qtd,0);
+  const totalVal=items.reduce((a,x)=>a+(x.preco||0)*x.qtd,0);
+  const linhas=items.map((item,i)=>`
+    <tr style="background:${i%2===0?'#f8fafc':'#fff'}">
+      <td style="padding:8px 10px;font-size:13px;font-weight:600">${item.nome}</td>
+      <td style="padding:8px 10px;font-family:monospace;font-size:12px;color:#555">${item.cod}</td>
+      <td style="padding:8px 10px;text-align:center;font-size:13px;color:#555">${item.un||'—'}</td>
+      <td style="padding:8px 10px;text-align:center;font-size:15px;font-weight:800;color:#1a2340">${item.qtd}</td>
+      <td style="padding:8px 10px;text-align:right;font-size:12px;color:#555">${item.preco>0?item.preco.toFixed(2)+'€':'—'}</td>
+      <td style="padding:8px 10px;text-align:right;font-size:13px;font-weight:700;color:#1a2340">${item.preco>0?(item.preco*item.qtd).toFixed(2)+'€':'—'}</td>
+    </tr>`).join('');
+  const html=`<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>Encomenda — ${FORN_ATIVO.nome}</title>
+  <style>
+    body{font-family:Arial,sans-serif;margin:0;padding:20px;color:#1a2340}
+    h1{font-size:22px;margin:0 0 4px}
+    .sub{font-size:13px;color:#666;margin-bottom:16px}
+    table{width:100%;border-collapse:collapse;border:1px solid #e0e7ef}
+    th{background:#1a2340;color:#fff;padding:9px 10px;font-size:11px;letter-spacing:0.5px;text-transform:uppercase;text-align:left}
+    th:nth-child(4),th:nth-child(5),th:nth-child(6){text-align:center}
+    tfoot td{padding:10px;font-weight:700;font-size:13px;border-top:2px solid #1a2340}
+    .logo{font-size:13px;color:#c9a84c;font-weight:800;margin-bottom:6px}
+    @media print{body{padding:10px}}
+  </style></head><body>
+  <div class="logo">PriceCheck · Pro</div>
+  <h1>Encomenda — ${FORN_ATIVO.nome}</h1>
+  <div class="sub">Emitida em ${ds} · ${items.length} artigo(s) · ${totalUnd} und. total</div>
+  <table>
+    <thead><tr>
+      <th>Produto</th><th>Código</th><th>Un.</th><th style="text-align:center">Qtd.</th><th style="text-align:right">Preço unit.</th><th style="text-align:right">Total</th>
+    </tr></thead>
+    <tbody>${linhas}</tbody>
+    <tfoot><tr>
+      <td colspan="3">TOTAL</td>
+      <td style="text-align:center">${totalUnd} und.</td>
+      <td></td>
+      <td style="text-align:right">${totalVal>0?totalVal.toFixed(2)+'€':'—'}</td>
+    </tr></tfoot>
+  </table>
+  <script>window.onload=()=>window.print();<\/script>
+  </body></html>`;
+  const w=window.open('','_blank');
+  w.document.write(html);w.document.close();
+}
+
+// ── SCANNER CONTÍNUO ENCOMENDAS ──
+async function abrirEncScanner(){
+  if(!FORN_ATIVO){toast('Selecione primeiro um fornecedor','err');nav('m4');return;}
+  const modal=document.getElementById('enc-scan-modal');
+  modal.style.display='flex';encScannerAberto=true;
+  document.getElementById('enc-scan-input').value='';
+  document.getElementById('enc-scan-badge').textContent='📦 '+FORN_ATIVO.nome;
+  atualizarEncBadge();
+  setEncStatus('A iniciar câmera...','');
+  if(temBarcodeDetector()){
+    try{encBarcodeDetector=new BarcodeDetector({formats:['ean_13','ean_8','code_128','code_39','qr_code','upc_a','upc_e','itf','codabar','code_93']});}
+    catch(e){encBarcodeDetector=null;}
+  }
+  await encIniciarCamera();
+}
+
+async function encIniciarCamera(){
+  encPararCamera();
+  setEncStatus('A iniciar câmera...','');
+  try{
+    const sel=document.getElementById('enc-scan-sel');
+    const selVal=sel.value&&sel.value.length>10?sel.value:null;
+    let deviceIdToUse=selVal;
+    if(!deviceIdToUse){
+      try{
+        const tmp=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
+        tmp.getTracks().forEach(t=>t.stop());
+        const devices=await navigator.mediaDevices.enumerateDevices();
+        encCamerasDisponiveis=devices.filter(d=>d.kind==='videoinput');
+        const backCam=encCamerasDisponiveis.find(c=>/(back|rear|traseira|environment)/i.test(c.label))||encCamerasDisponiveis[encCamerasDisponiveis.length-1];
+        if(backCam&&backCam.deviceId)deviceIdToUse=backCam.deviceId;
+      }catch(e){}
+    }
+    const constraints=deviceIdToUse
+      ?{video:{deviceId:{exact:deviceIdToUse},width:{ideal:1920},height:{ideal:1080}},audio:false}
+      :{video:{facingMode:'environment',width:{ideal:1920},height:{ideal:1080}},audio:false};
+    try{encStreamAtual=await navigator.mediaDevices.getUserMedia(constraints);}
+    catch(e1){
+      try{encStreamAtual=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});}
+      catch(e2){encStreamAtual=await navigator.mediaDevices.getUserMedia({video:true,audio:false});}
+    }
+    try{
+      if(!encCamerasDisponiveis.length){const dv=await navigator.mediaDevices.enumerateDevices();encCamerasDisponiveis=dv.filter(d=>d.kind==='videoinput');}
+      const trackLabel=(encStreamAtual.getVideoTracks()[0]?.label||'').toLowerCase();
+      sel.innerHTML=encCamerasDisponiveis.map((c,i)=>{const lbl=c.label||'Câmera '+(i+1);const s2=trackLabel&&c.label&&c.label.toLowerCase()===trackLabel;return`<option value="${c.deviceId}"${s2?' selected':''}>${lbl}</option>`;}).join('');
+    }catch(e){sel.innerHTML='<option value="">Câmera ativa</option>';}
+    const video=document.getElementById('enc-scan-video');
+    video.srcObject=encStreamAtual;video.muted=true;
+    try{await video.play();}catch(e){}
+    setEncStatus('✓ Câmera ativa — modo contínuo','ok');
+    if(temBarcodeDetector()&&encBarcodeDetector)encIniciarLoopNativo(video);
+    else encCarregarZXingEIniciar(video);
+  }catch(err){
+    let msg='⚠️ Câmera indisponível — use entrada manual';
+    if(err.name==='NotAllowedError')msg='❌ Permissão negada';
+    setEncStatus(msg,'err');
+  }
+}
+
+function encIniciarLoopNativo(video){
+  if(encScanLoopId)cancelAnimationFrame(encScanLoopId);
+  encLastCode=null;let processing=false;let lastAddedCode=null;let lastAddedTime=0;
+  async function loop(){
+    if(!encScannerAberto)return;
+    if(!processing&&video.readyState>=2){
+      processing=true;
+      try{
+        const barcodes=await encBarcodeDetector.detect(video);
+        if(barcodes.length>0&&encScannerAberto){
+          const cod=barcodes[0].rawValue;
+          const now=Date.now();
+          // Evitar re-leitura do mesmo código em menos de 1.5s
+          if(cod!==lastAddedCode||(now-lastAddedTime)>1500){
+            lastAddedCode=cod;lastAddedTime=now;
+            encLastCode=cod;
+            setEncStatus('✓ '+cod,'ok');
+            document.getElementById('enc-scan-last').textContent='Último: '+cod;
+            bipe();
+            encFlashVerde();
+            encAdicionarCodigo(cod);
+            atualizarEncBadge();
+          }
+        }
+      }catch(e){}
+      processing=false;
+    }
+    encScanLoopId=requestAnimationFrame(loop);
+  }
+  encScanLoopId=requestAnimationFrame(loop);
+}
+
+function encIniciarZXing(video){
+  try{
+    encZxingReader=new ZXing.BrowserMultiFormatReader();encLastCode=null;
+    let lastAddedCode=null,lastAddedTime=0;
+    encZxingReader.decodeFromStream(encStreamAtual,video,(result,err)=>{
+      if(result&&encScannerAberto){
+        const cod=result.getText();
+        const now=Date.now();
+        if(cod!==lastAddedCode||(now-lastAddedTime)>1500){
+          lastAddedCode=cod;lastAddedTime=now;
+          setEncStatus('✓ '+cod,'ok');
+          document.getElementById('enc-scan-last').textContent='Último: '+cod;
+          bipe();encFlashVerde();encAdicionarCodigo(cod);atualizarEncBadge();
+        }
+      }
+    });
+  }catch(e){setEncStatus('Use entrada manual','err');}
+}
+
+function encCarregarZXingEIniciar(video){
+  if(window.ZXING_LOADED&&typeof ZXing!=='undefined'){encIniciarZXing(video);return;}
+  const s=document.createElement('script');
+  s.src='https://unpkg.com/@zxing/library@0.20.0/umd/index.min.js';
+  s.onload=()=>{window.ZXING_LOADED=true;setEncStatus('✓ Câmera ativa','ok');encIniciarZXing(video);};
+  s.onerror=()=>setEncStatus('Use entrada manual','err');
+  document.head.appendChild(s);
+}
+
+function encFlashVerde(){
+  const el=document.getElementById('enc-scan-flash');
+  if(!el)return;
+  el.style.opacity='1';setTimeout(()=>el.style.opacity='0',180);
+}
+
+async function encFlipCamera(){
+  encPararCamera();
+  try{const devices=await navigator.mediaDevices.enumerateDevices();encCamerasDisponiveis=devices.filter(d=>d.kind==='videoinput');if(encCamerasDisponiveis.length>1){encCameraIndex=(encCameraIndex+1)%encCamerasDisponiveis.length;document.getElementById('enc-scan-sel').value=encCamerasDisponiveis[encCameraIndex].deviceId;}}catch(e){}
+  await encIniciarCamera();
+}
+function encTrocarCamera(){encIniciarCamera();}
+
+function encPararCamera(){
+  if(encScanLoopId){cancelAnimationFrame(encScanLoopId);encScanLoopId=null;}
+  if(encStreamAtual){encStreamAtual.getTracks().forEach(t=>t.stop());encStreamAtual=null;}
+  if(encZxingReader){try{encZxingReader.reset();}catch(e){}encZxingReader=null;}
+  const v=document.getElementById('enc-scan-video');if(v)v.srcObject=null;
+}
+
+function fecharEncScanner(){
+  encPararCamera();
+  document.getElementById('enc-scan-modal').style.display='none';
+  encScannerAberto=false;
+  // Atualizar a tela de encomendas
+  if(document.getElementById('m5').classList.contains('active'))renderEncomenda();
+}
+
+function encConfirmarManual(){
+  const v=document.getElementById('enc-scan-input').value.trim();
+  if(!v){toast('Insira um código','err');return;}
+  document.getElementById('enc-scan-input').value='';
+  setEncStatus('✓ '+v,'ok');
+  document.getElementById('enc-scan-last').textContent='Último: '+v;
+  bipe();encFlashVerde();encAdicionarCodigo(v);atualizarEncBadge();
+}
+
+function setEncStatus(msg,tipo){
+  const el=document.getElementById('enc-scan-status');
+  el.textContent=msg;
+  el.style.color=tipo==='ok'?'#10b981':tipo==='err'?'#ef4444':'#7a8fba';
+}
+
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&encScannerAberto)fecharEncScanner();});
+
 // ══ INIT ══
 (async()=>{
   await abrirImgDB();
   await carregarTodasImgsDB();
-  carregar();atualizarHeaderForn();atualizarStats();
+  carregar();carregarEncomendas();atualizarHeaderForn();atualizarStats();
   setTimeout(abrirScanner,400);
 })();
 ['pmodal-bg','nmodal-bg','hmodal-bg','fmodal-bg','em-modal-bg','wa-modal-bg'].forEach(id=>{
@@ -1299,6 +1767,9 @@ function exportarHistorico(){
     if(e.target===this){this.classList.remove('open');if(id==='fmodal-bg')fecharFornModal();}
   });
 });
+
+// Fechar scanner encomendas ao clicar fora (área de vídeo não tem overlay, mas garantir fecho ao clicar no fundo)
+document.getElementById('enc-scan-modal').addEventListener('click',function(e){if(e.target===this)fecharEncScanner();});
 </script>
 </body>
 </html>
