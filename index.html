@@ -6,17 +6,17 @@
 <title>PriceCheck Pro</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#1a2340">
+<meta name="theme-color" content="#e9edf3">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#111827; --s1:#1a2340; --s2:#1e2a4a; --s3:#263055;
-  --bd:rgba(255,255,255,0.07); --bd2:rgba(255,255,255,0.12);
+  --bg:#eef1f5; --s1:#ffffff; --s2:#eef1f6; --s3:#e2e7ef;
+  --bd:rgba(15,23,42,0.08); --bd2:rgba(15,23,42,0.14);
   --a:#c9a84c; --ag:#b8963e; --a2:#10b981; --a2g:#059669;
-  --warn:#f59e0b; --danger:#ef4444; --text:#f1f5f9; --muted:#7a8fba; --card:#18223a;
+  --warn:#f59e0b; --danger:#ef4444; --text:#1e293b; --muted:#64748b; --card:#ffffff;
   --r8:8px; --r12:12px; --r16:16px;
-  --navy:#1a2340; --navy2:#111827;
+  --navy:#e5e9f0; --navy2:#f4f6f9;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;touch-action:manipulation;}
@@ -29,7 +29,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
 .hdate{font-size:13px;color:var(--a);font-weight:700;margin-left:auto;padding-right:4px;}
 
 .hrow2{display:flex;align-items:center;gap:8px;padding:0 14px 10px;}
-.hforn{flex:1;background:rgba(255,255,255,0.05);border:1px solid var(--bd2);border-radius:var(--r8);padding:7px 11px;color:var(--text);font-weight:600;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:7px;min-width:0;overflow:hidden;transition:background 0.15s;}
+.hforn{flex:1;background:rgba(15,23,42,0.04);border:1px solid var(--bd2);border-radius:var(--r8);padding:7px 11px;color:var(--text);font-weight:600;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:7px;min-width:0;overflow:hidden;transition:background 0.15s;}
 .hforn:active{background:var(--s3);}
 .hforn-nome{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .hforn.sem{color:var(--muted);}
@@ -191,9 +191,9 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
 .cwrap{padding:0 12px 20px;overflow-x:auto;}
 .ctable{width:100%;border-collapse:collapse;min-width:380px;}
 .ctable th{background:var(--s1);padding:6px 6px;font-size:9px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--bd);text-align:left;white-space:nowrap;}
-.ctable td{padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.025);font-size:12px;vertical-align:top;}
+.ctable td{padding:6px 6px;border-bottom:1px solid rgba(15,23,42,0.06);font-size:12px;vertical-align:top;}
 .ctable tr.cr{cursor:pointer;}
-.ctable tr.cr:hover td{background:rgba(255,255,255,0.015);}
+.ctable tr.cr:hover td{background:rgba(15,23,42,0.03);}
 .ctd-n{font-weight:600;max-width:110px;overflow-wrap:break-word;word-break:break-word;line-height:1.3;}
 .cmono{font-family:'JetBrains Mono',monospace;font-weight:600;}
 .cbest{color:var(--a2);}.cworst{color:var(--danger);}
@@ -281,7 +281,9 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
 .enc-item-img-e{width:46px;height:46px;border-radius:var(--r8);background:var(--s2);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
 .enc-item-info{flex:1;min-width:0;}
 .enc-item-nome{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.enc-item-cod{font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-top:2px;}
+.enc-item-cod{font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-top:2px;display:flex;align-items:center;gap:6px;}
+.enc-visto-chk{width:16px;height:16px;accent-color:var(--a2);cursor:pointer;flex-shrink:0;}
+.enc-item.visto{border-color:rgba(16,185,129,0.35);background:rgba(16,185,129,0.05);}
 .enc-item-qtd-wrap{display:flex;align-items:center;gap:6px;flex-shrink:0;}
 .enc-qtd-btn{width:30px;height:30px;border:none;border-radius:8px;background:var(--s2);color:var(--text);font-size:18px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;}
 .enc-qtd-btn:active{background:var(--s3);}
@@ -290,6 +292,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
 .enc-acoes{margin:0 12px 14px;display:flex;gap:8px;}
 .enc-act{flex:1;padding:12px;border:none;border-radius:var(--r12);font-size:13px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;}
 .enc-act-imp{background:var(--a2);color:#fff;}
+.enc-act-xls{background:var(--a);color:#1a2340;}
 .enc-act-del{background:rgba(239,68,68,0.08);color:var(--danger);border:1px solid rgba(239,68,68,0.15);}
 .enc-total{margin:0 12px 8px;background:var(--navy);border:1px solid rgba(201,168,76,0.2);border-radius:var(--r12);padding:12px 14px;display:flex;align-items:center;justify-content:space-between;}
 .enc-total-lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;font-weight:700;}
@@ -382,18 +385,18 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
     </div>
     <div style="position:absolute;bottom:10px;left:0;right:0;text-align:center;font-size:11px;color:rgba(255,255,255,0.5);letter-spacing:1px;">APONTE PARA O CÓDIGO DE BARRAS</div>
   </div>
-  <div style="padding:14px 16px 20px;background:#1a2340;border-top:1px solid rgba(201,168,76,0.2);">
+  <div style="padding:14px 16px 20px;background:#e5e9f0;border-top:1px solid rgba(201,168,76,0.35);">
     <div id="scan-status" style="text-align:center;font-size:12px;min-height:18px;margin-bottom:10px;font-weight:500;"></div>
     <div style="display:flex;gap:8px;margin-bottom:10px;">
-      <select id="scan-sel" style="flex:1;background:#1e2a4a;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:9px 12px;color:#f1f5f9;font-size:12px;font-family:Inter,sans-serif;outline:none;" onchange="trocarCamera()"><option>A iniciar...</option></select>
-      <button onclick="flipCamera()" style="width:40px;height:40px;background:#1e2a4a;border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#f1f5f9;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">🔄</button>
+      <select id="scan-sel" style="flex:1;background:#ffffff;border:1px solid rgba(15,23,42,0.14);border-radius:8px;padding:9px 12px;color:#1e293b;font-size:12px;font-family:Inter,sans-serif;outline:none;" onchange="trocarCamera()"><option>A iniciar...</option></select>
+      <button onclick="flipCamera()" style="width:40px;height:40px;background:#ffffff;border:1px solid rgba(15,23,42,0.14);border-radius:8px;color:#1e293b;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">🔄</button>
     </div>
     <div style="display:flex;gap:8px;margin-bottom:10px;">
-      <input type="text" id="scan-input" style="flex:1;background:#1e2a4a;border:1.5px solid rgba(255,255,255,0.1);border-radius:8px;padding:11px 14px;color:#f1f5f9;font-size:16px;font-family:'JetBrains Mono',monospace;text-align:center;outline:none;" placeholder="Código manual..." inputmode="numeric" onkeydown="if(event.key==='Enter')confirmarManual()">
+      <input type="text" id="scan-input" style="flex:1;background:#ffffff;border:1.5px solid rgba(15,23,42,0.14);border-radius:8px;padding:11px 14px;color:#1e293b;font-size:16px;font-family:'JetBrains Mono',monospace;text-align:center;outline:none;" placeholder="Código manual..." inputmode="numeric" onkeydown="if(event.key==='Enter')confirmarManual()">
     </div>
     <div style="display:flex;gap:8px;">
       <button onclick="confirmarManual()" style="flex:1;padding:13px;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;background:#c9a84c;color:#1a2340;">✓ Confirmar</button>
-      <button onclick="fecharScanner()" style="flex:1;padding:13px;border:1px solid rgba(255,255,255,0.1);border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;background:#1e2a4a;color:#f1f5f9;">✕ Fechar</button>
+      <button onclick="fecharScanner()" style="flex:1;padding:13px;border:1px solid rgba(15,23,42,0.14);border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;background:#ffffff;color:#1e293b;">✕ Fechar</button>
     </div>
   </div>
 </div>
@@ -550,16 +553,16 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
     <div class="enc-scan-last" id="enc-scan-last">Aponte para o código de barras</div>
   </div>
   <div id="enc-scan-flash" style="position:absolute;inset:0;background:rgba(16,185,129,0.25);opacity:0;pointer-events:none;transition:opacity 0.15s;"></div>
-  <div style="padding:12px 16px 20px;background:#1a2340;border-top:1px solid rgba(201,168,76,0.2);">
-    <div id="enc-scan-status" style="text-align:center;font-size:12px;min-height:18px;margin-bottom:8px;font-weight:500;color:#7a8fba;"></div>
+  <div style="padding:12px 16px 20px;background:#e5e9f0;border-top:1px solid rgba(201,168,76,0.35);">
+    <div id="enc-scan-status" style="text-align:center;font-size:12px;min-height:18px;margin-bottom:8px;font-weight:500;color:#64748b;"></div>
     <div style="display:flex;gap:8px;margin-bottom:8px;">
-      <select id="enc-scan-sel" style="flex:1;background:#1e2a4a;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:9px 12px;color:#f1f5f9;font-size:12px;font-family:Inter,sans-serif;outline:none;" onchange="encTrocarCamera()"><option>A iniciar...</option></select>
-      <button onclick="encFlipCamera()" style="width:40px;height:40px;background:#1e2a4a;border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#f1f5f9;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">🔄</button>
+      <select id="enc-scan-sel" style="flex:1;background:#ffffff;border:1px solid rgba(15,23,42,0.14);border-radius:8px;padding:9px 12px;color:#1e293b;font-size:12px;font-family:Inter,sans-serif;outline:none;" onchange="encTrocarCamera()"><option>A iniciar...</option></select>
+      <button onclick="encFlipCamera()" style="width:40px;height:40px;background:#ffffff;border:1px solid rgba(15,23,42,0.14);border-radius:8px;color:#1e293b;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;">🔄</button>
     </div>
     <div style="display:flex;gap:8px;">
-      <input type="text" id="enc-scan-input" style="flex:1;background:#1e2a4a;border:1.5px solid rgba(255,255,255,0.1);border-radius:8px;padding:10px 14px;color:#f1f5f9;font-size:15px;font-family:'JetBrains Mono',monospace;text-align:center;outline:none;" placeholder="Código manual..." inputmode="numeric" onkeydown="if(event.key==='Enter')encConfirmarManual()">
+      <input type="text" id="enc-scan-input" style="flex:1;background:#ffffff;border:1.5px solid rgba(15,23,42,0.14);border-radius:8px;padding:10px 14px;color:#1e293b;font-size:15px;font-family:'JetBrains Mono',monospace;text-align:center;outline:none;" placeholder="Código manual..." inputmode="numeric" onkeydown="if(event.key==='Enter')encConfirmarManual()">
       <button onclick="encConfirmarManual()" style="padding:10px 14px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;background:#c9a84c;color:#1a2340;">✓</button>
-      <button onclick="fecharEncScanner()" style="padding:10px 16px;border:1px solid rgba(255,255,255,0.1);border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;background:#1e2a4a;color:#f1f5f9;">✕ Fechar</button>
+      <button onclick="fecharEncScanner()" style="padding:10px 16px;border:1px solid rgba(15,23,42,0.14);border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;background:#ffffff;color:#1e293b;">✕ Fechar</button>
     </div>
   </div>
 </div>
@@ -868,7 +871,7 @@ function pararCamera(){
 }
 function fecharScanner(){pararCamera();document.getElementById('scan-modal').style.display='none';scannerAberto=false;}
 function confirmarManual(){const v=document.getElementById('scan-input').value.trim();if(!v){toast('Insira um código','err');return;}fecharScanner();processarCodigo(v);}
-function setScanStatus(msg,tipo){const el=document.getElementById('scan-status');el.textContent=msg;el.className='';el.style.color=tipo==='ok'?'#10b981':tipo==='err'?'#ef4444':'#7a8fba';}
+function setScanStatus(msg,tipo){const el=document.getElementById('scan-status');el.textContent=msg;el.className='';el.style.color=tipo==='ok'?'#10b981':tipo==='err'?'#ef4444':'#64748b';}
 
 let audioCtx=null;
 function bipe(){
@@ -1435,12 +1438,12 @@ function renderEncomenda(){
   items.forEach((item,idx)=>{
     const imgUrl=item.imgUrl||'';
     const imgHtml=imgUrl?`<img src="${imgUrl}" class="enc-item-img" onerror="this.outerHTML='<div class=enc-item-img-e>📦</div>'">`:`<div class="enc-item-img-e">📦</div>`;
-    html+=`<div class="enc-item" id="enc-item-${idx}">
+    html+=`<div class="enc-item${item.visto?' visto':''}" id="enc-item-${idx}">
       <div class="enc-item-row">
         ${imgHtml}
         <div class="enc-item-info">
           <div class="enc-item-nome">${item.nome}</div>
-          <div class="enc-item-cod">${item.cod}${item.un?' · '+item.un:''}</div>
+          <div class="enc-item-cod"><input type="checkbox" class="enc-visto-chk" title="Marcar como visto" ${item.visto?'checked':''} onchange="encToggleVisto(${idx},this.checked)"> ${item.cod}${item.un?' · '+item.un:''}</div>
         </div>
         <div class="enc-item-qtd-wrap">
           <button class="enc-qtd-btn" onclick="encAlterarQtd(${idx},-1)">−</button>
@@ -1467,6 +1470,7 @@ function renderEncomenda(){
   }
   html+=`<div class="enc-acoes">
     <button class="enc-act enc-act-imp" onclick="imprimirEncomenda()">🖨️ Imprimir</button>
+    <button class="enc-act enc-act-xls" onclick="exportarEncomendaExcel()">📊 Excel</button>
     <button class="enc-act enc-act-del" onclick="apagarEncomenda()">🗑️ Limpar tudo</button>
   </div>`;
   wrap.innerHTML=html;
@@ -1493,7 +1497,7 @@ function encAdicionarCodigo(codigo){
   const un=prod?prod.un:'';
   const preco=prod?prod.preco:0;
   const imgUrl=prod?getImg(prod):'';
-  items.push({cod:codigo,nome,un,preco,qtd:1,imgUrl});
+  items.push({cod:codigo,nome,un,preco,qtd:1,imgUrl,visto:false});
   salvarEncomendas();
   atualizarEncBadge();
   toast('+ '+nome,'ok');
@@ -1533,12 +1537,44 @@ function encApagarItem(idx){
   salvarEncomendas();renderEncomenda();
   toast('Removido: '+nome,'ok');
 }
+function encToggleVisto(idx,checked){
+  if(!FORN_ATIVO)return;
+  const items=ENCOMENDAS[FORN_ATIVO.id]||[];
+  if(!items[idx])return;
+  items[idx].visto=!!checked;
+  salvarEncomendas();
+  const el=document.getElementById('enc-item-'+idx);
+  if(el)el.classList.toggle('visto',items[idx].visto);
+}
+
 function apagarEncomenda(){
   if(!FORN_ATIVO)return;
   if(!confirm('Apagar toda a encomenda de '+FORN_ATIVO.nome+'?'))return;
   ENCOMENDAS[FORN_ATIVO.id]=[];
   salvarEncomendas();renderEncomenda();
   toast('Encomenda limpa','ok');
+}
+
+function exportarEncomendaExcel(){
+  if(!FORN_ATIVO){toast('Selecione um fornecedor','err');return;}
+  const items=ENCOMENDAS[FORN_ATIVO.id]||[];
+  if(!items.length){toast('Encomenda vazia','err');return;}
+  const hdr=['Visto','Código','Produto','Un.','Qtd.','Preço unit. €','Total €'];
+  const rows=items.map(item=>[
+    item.visto?'✔':'',
+    item.cod,
+    item.nome,
+    item.un||'',
+    item.qtd,
+    item.preco>0?Number(item.preco.toFixed(2)):'',
+    item.preco>0?Number((item.preco*item.qtd).toFixed(2)):''
+  ]);
+  const ws=XLSX.utils.aoa_to_sheet([hdr,...rows]);
+  ws['!cols']=[{wch:8},{wch:14},{wch:32},{wch:8},{wch:8},{wch:14},{wch:12}];
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Encomenda');
+  const nomeForn=(FORN_ATIVO.nome||'fornecedor').replace(/[^a-z0-9]+/gi,'_');
+  XLSX.writeFile(wb,'PriceCheck_Encomenda_'+nomeForn+'_'+new Date().toISOString().split('T')[0]+'.xlsx');
+  toast('✓ Exportado!','ok');
 }
 
 function imprimirEncomenda(){
@@ -1750,7 +1786,7 @@ function encConfirmarManual(){
 function setEncStatus(msg,tipo){
   const el=document.getElementById('enc-scan-status');
   el.textContent=msg;
-  el.style.color=tipo==='ok'?'#10b981':tipo==='err'?'#ef4444':'#7a8fba';
+  el.style.color=tipo==='ok'?'#10b981':tipo==='err'?'#ef4444':'#64748b';
 }
 
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&encScannerAberto)fecharEncScanner();});
