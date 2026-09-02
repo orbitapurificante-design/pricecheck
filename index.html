@@ -33,7 +33,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
 .hforn:active{background:var(--s3);}
 .hforn-nome{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .hforn.sem{color:var(--muted);}
-.hforn.ativo{border-color:rgba(201,168,76,0.4);color:var(--a);}
+.hforn.ativo{border-color:rgba(122,143,186,0.45);color:var(--muted);}
 .hforn-dot{width:6px;height:6px;border-radius:50%;background:var(--a2);flex-shrink:0;}
 .hforn.sem .hforn-dot{background:var(--muted);}
 
@@ -73,6 +73,9 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
 .pm-img-empty{width:80px;height:80px;border-radius:var(--r12);background:var(--s2);display:flex;align-items:center;justify-content:center;font-size:30px;flex-shrink:0;}
 .pm-info{flex:1;min-width:0;padding-top:2px;}
 .pm-cod{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:4px;}
+.pm-cod-row{display:flex;align-items:center;gap:6px;margin-bottom:4px;}
+.pm-visto-chk{width:15px;height:15px;accent-color:var(--a2);cursor:pointer;flex-shrink:0;}
+.pm-visto-lbl{font-size:9px;color:var(--a2);text-transform:uppercase;letter-spacing:0.5px;font-weight:700;}
 .pm-nome{font-size:17px;font-weight:700;line-height:1.2;margin-bottom:4px;}
 .pm-cat{font-size:11px;color:var(--muted);font-weight:500;}
 .pm-ref{background:var(--s2);border-radius:var(--r12);padding:12px 14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;border:1px solid var(--bd);}
@@ -192,8 +195,9 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
 .ctable{width:100%;border-collapse:collapse;min-width:380px;}
 .ctable th{background:var(--s1);padding:6px 6px;font-size:9px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--bd);text-align:left;white-space:nowrap;}
 .ctable td{padding:6px 6px;border-bottom:1px solid rgba(255,255,255,0.025);font-size:12px;vertical-align:top;}
-.ctable tr.cr{cursor:pointer;}
-.ctable tr.cr:hover td{background:rgba(255,255,255,0.015);}
+.ctable tr.cr{cursor:pointer;background:var(--card);}
+.ctable tr.cr:nth-child(even){background:var(--s1);}
+.ctable tr.cr:hover td{background:rgba(255,255,255,0.04);}
 .ctd-n{font-weight:600;max-width:110px;overflow-wrap:break-word;word-break:break-word;line-height:1.3;}
 .cmono{font-family:'JetBrains Mono',monospace;font-weight:600;}
 .cbest{color:var(--a2);}.cworst{color:var(--danger);}
@@ -266,7 +270,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
 .enc-scan-btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:12px 16px;background:linear-gradient(135deg,var(--a),var(--ag));border:none;border-radius:var(--r12);color:#1a2340;font-size:13px;font-weight:800;cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap;box-shadow:0 4px 16px rgba(201,168,76,0.25);}
 .enc-scan-btn:active{transform:scale(0.97);}
 .enc-forn-sel{margin:0 12px 10px;padding:10px 14px;background:var(--navy);border:1px solid rgba(201,168,76,0.2);border-radius:var(--r12);display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600;}
-.enc-forn-sel.ok{border-color:rgba(201,168,76,0.4);color:var(--a);}
+.enc-forn-sel.ok{border-color:rgba(122,143,186,0.45);color:var(--muted);}
 .enc-forn-sel.sem{color:var(--muted);}
 .enc-forn-dot{width:8px;height:8px;border-radius:50%;background:var(--a2);flex-shrink:0;}
 .enc-forn-sel.sem .enc-forn-dot{background:var(--muted);}
@@ -281,9 +285,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
 .enc-item-img-e{width:46px;height:46px;border-radius:var(--r8);background:var(--s2);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
 .enc-item-info{flex:1;min-width:0;}
 .enc-item-nome{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.enc-item-cod{font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-top:2px;display:flex;align-items:center;gap:6px;}
-.enc-visto-chk{width:16px;height:16px;accent-color:var(--a2);cursor:pointer;flex-shrink:0;}
-.enc-item.visto{border-color:rgba(16,185,129,0.35);background:rgba(16,185,129,0.05);}
+.enc-item-cod{font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-top:2px;}
 .enc-item-qtd-wrap{display:flex;align-items:center;gap:6px;flex-shrink:0;}
 .enc-qtd-btn{width:30px;height:30px;border:none;border-radius:8px;background:var(--s2);color:var(--text);font-size:18px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;}
 .enc-qtd-btn:active{background:var(--s3);}
@@ -627,7 +629,7 @@ async function carregarTodasImgsDB(){
     tx.onerror=()=>rej(tx.error);
   });
 }
-let DADOS=[],FORNECEDORES=[],FORN_ATIVO=null,PRECOS_DB={},FAM_ESTADOS={};
+let DADOS=[],FORNECEDORES=[],FORN_ATIVO=null,PRECOS_DB={},FAM_ESTADOS={},VISTOS={};
 let COD_ATUAL=null,FORN_EDIT_ID=null,COMP_CAT='todos',FORN_NEXT_ID=Date.now();
 
 // ══ DATA HEADER ══
@@ -644,10 +646,16 @@ function carregar(){
   try{const d=localStorage.getItem('PC_FORN');if(d)FORNECEDORES=JSON.parse(d);}catch(e){}
   try{const d=localStorage.getItem('PC_FA');if(d)FORN_ATIVO=JSON.parse(d);}catch(e){}
   try{const d=localStorage.getItem('PC_PREC');if(d)PRECOS_DB=JSON.parse(d);}catch(e){}
+  try{const d=localStorage.getItem('PC_VISTOS');if(d)VISTOS=JSON.parse(d);}catch(e){}
   try{const d=localStorage.getItem('PC_NID');if(d)FORN_NEXT_ID=parseInt(d);}catch(e){}
 }
 function salvarForn(){localStorage.setItem('PC_FORN',JSON.stringify(FORNECEDORES));localStorage.setItem('PC_NID',String(FORN_NEXT_ID));}
 function salvarPrecos(){localStorage.setItem('PC_PREC',JSON.stringify(PRECOS_DB));}
+function salvarVistos(){localStorage.setItem('PC_VISTOS',JSON.stringify(VISTOS));}
+function toggleVisto(cod,checked){
+  VISTOS[cod]=!!checked;
+  salvarVistos();
+}
 function salvarFornAtivo(){localStorage.setItem('PC_FA',JSON.stringify(FORN_ATIVO));}
 
 // ══ NAV — cada tab mostra SÓ o seu conteúdo ══
@@ -978,11 +986,14 @@ function mostrarProdModal(prod){
     ?`<img src="${imgUrl}" class="pm-img" onerror="this.outerHTML='<div class=pm-img-empty>📦</div>'">`
     :`<div class="pm-img-empty">📦</div>`;
 
+  const vistoChk=`<div class="pm-cod-row"><input type="checkbox" class="pm-visto-chk" id="pm-visto" ${VISTOS[cod]?'checked':''} onchange="toggleVisto('${ce3}',this.checked)"><label for="pm-visto" class="pm-visto-lbl" style="cursor:pointer">Visto</label></div>`;
+
   document.getElementById('pmodal-content').innerHTML=`
     <div class="mhandle"></div>
     <div class="pm-top">
       ${imgSection}
       <div class="pm-info">
+        ${vistoChk}
         <div class="pm-cod">${cod}</div>
         <div class="pm-nome">${prod.nome}</div>
         <div class="pm-cat">${prod.cat||''}${prod.un?' · '+prod.un:''}</div>
@@ -1015,9 +1026,11 @@ function mostrarCompBarras(codigo,precosForn){
     const mb=i===0&&entradas.length>1,pw=i===entradas.length-1&&entradas.length>1;
     return`<div class="hist-row"><div><div class="hist-forn">${mb?'🥇 ':pw?'🔴 ':''}${nf}</div><div class="hist-data">📅 ${e.ul.data}</div></div><div class="hist-preco" style="color:${mb?'var(--a2)':pw?'var(--danger)':'var(--text)'}">${parseFloat(e.ul.preco).toFixed(2)}€</div></div>`;
   }).join('');
+  const ceb=codigo.replace(/'/g,"\\'");
+  const vistoChk=`<div class="pm-cod-row"><input type="checkbox" class="pm-visto-chk" id="pm-visto" ${VISTOS[codigo]?'checked':''} onchange="toggleVisto('${ceb}',this.checked)"><label for="pm-visto" class="pm-visto-lbl" style="cursor:pointer">Visto</label></div>`;
   document.getElementById('pmodal-content').innerHTML=`
     <div class="mhandle"></div>
-    <div class="pm-top"><div class="pm-img-empty">🔖</div><div class="pm-info"><div class="pm-cod">${codigo}</div><div class="pm-nome">Sem referência Excel</div><div class="pm-cat">Comparativo fornecedores</div></div></div>
+    <div class="pm-top"><div class="pm-img-empty">🔖</div><div class="pm-info">${vistoChk}<div class="pm-cod">${codigo}</div><div class="pm-nome">Sem referência Excel</div><div class="pm-cat">Comparativo fornecedores</div></div></div>
     <div style="margin-bottom:14px"><div class="pm-hist-title">Preços registados</div>${rows}</div>
     <div class="pm-btns"><button class="pm-btn pm-cancel" style="flex:none;width:100%" onclick="fecharPmodal()">✕ Fechar</button></div>`;
   document.getElementById('pmodal-bg').classList.add('open');
@@ -1358,7 +1371,7 @@ function exportarComparativo(){
   const cods=Object.keys(PRECOS_DB);if(!cods.length){toast('Sem dados','err');return;}
   const fids=[...new Set(cods.flatMap(cod=>Object.keys(PRECOS_DB[cod])))];
   const fo=fids.map(fid=>FORNECEDORES.find(f=>String(f.id)===String(fid))||{id:fid,nome:'Fornec. #'+fid});
-  const hdr=['Código','Produto','Categoria','Ref.€',...fo.map(f=>f.nome+' €'),...fo.map(f=>f.nome+' data'),'Δ Máx.€','Melhor'];
+  const hdr=['Visto','Código','Produto','Categoria','Ref.€',...fo.map(f=>f.nome+' €'),...fo.map(f=>f.nome+' data'),'Δ Máx.€','Melhor'];
   const rows=cods.map(cod=>{
     const prod=DADOS.find(x=>getCod(x)===cod);
     const np=prod?prod.nome:(PRECOS_DB[cod]?.[Object.keys(PRECOS_DB[cod])[0]]?.[0]?.nome||cod);
@@ -1369,10 +1382,10 @@ function exportarComparativo(){
     const minP=vals.length>0?Math.min(...vals):null,maxP=vals.length>0?Math.max(...vals):null;
     const dm=minP!=null&&maxP!=null&&vals.length>1?(maxP-minP).toFixed(2):'';
     const mi=vals.length>0&&minP!=null?pv.indexOf(minP):-1;
-    return[cod,np,cat,pr,...pv,...dv,dm,mi>=0?fo[mi].nome:''];
+    return[VISTOS[cod]?'✔':'',cod,np,cat,pr,...pv,...dv,dm,mi>=0?fo[mi].nome:''];
   });
   const ws=XLSX.utils.aoa_to_sheet([hdr,...rows]);
-  ws['!cols']=[{wch:14},{wch:32},{wch:14},{wch:10},...fo.map(()=>({wch:12})),...fo.map(()=>({wch:18})),{wch:10},{wch:18}];
+  ws['!cols']=[{wch:8},{wch:14},{wch:32},{wch:14},{wch:10},...fo.map(()=>({wch:12})),...fo.map(()=>({wch:18})),{wch:10},{wch:18}];
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Comparativo');
   XLSX.writeFile(wb,'PriceCheck_Comparativo_'+new Date().toISOString().split('T')[0]+'.xlsx');
   toast('✓ Exportado!','ok');
@@ -1438,12 +1451,12 @@ function renderEncomenda(){
   items.forEach((item,idx)=>{
     const imgUrl=item.imgUrl||'';
     const imgHtml=imgUrl?`<img src="${imgUrl}" class="enc-item-img" onerror="this.outerHTML='<div class=enc-item-img-e>📦</div>'">`:`<div class="enc-item-img-e">📦</div>`;
-    html+=`<div class="enc-item${item.visto?' visto':''}" id="enc-item-${idx}">
+    html+=`<div class="enc-item" id="enc-item-${idx}">
       <div class="enc-item-row">
         ${imgHtml}
         <div class="enc-item-info">
           <div class="enc-item-nome">${item.nome}</div>
-          <div class="enc-item-cod"><input type="checkbox" class="enc-visto-chk" title="Marcar como visto" ${item.visto?'checked':''} onchange="encToggleVisto(${idx},this.checked)"> ${item.cod}${item.un?' · '+item.un:''}</div>
+          <div class="enc-item-cod">${item.cod}${item.un?' · '+item.un:''}</div>
         </div>
         <div class="enc-item-qtd-wrap">
           <button class="enc-qtd-btn" onclick="encAlterarQtd(${idx},-1)">−</button>
@@ -1497,7 +1510,7 @@ function encAdicionarCodigo(codigo){
   const un=prod?prod.un:'';
   const preco=prod?prod.preco:0;
   const imgUrl=prod?getImg(prod):'';
-  items.push({cod:codigo,nome,un,preco,qtd:1,imgUrl,visto:false});
+  items.push({cod:codigo,nome,un,preco,qtd:1,imgUrl});
   salvarEncomendas();
   atualizarEncBadge();
   toast('+ '+nome,'ok');
@@ -1537,16 +1550,6 @@ function encApagarItem(idx){
   salvarEncomendas();renderEncomenda();
   toast('Removido: '+nome,'ok');
 }
-function encToggleVisto(idx,checked){
-  if(!FORN_ATIVO)return;
-  const items=ENCOMENDAS[FORN_ATIVO.id]||[];
-  if(!items[idx])return;
-  items[idx].visto=!!checked;
-  salvarEncomendas();
-  const el=document.getElementById('enc-item-'+idx);
-  if(el)el.classList.toggle('visto',items[idx].visto);
-}
-
 function apagarEncomenda(){
   if(!FORN_ATIVO)return;
   if(!confirm('Apagar toda a encomenda de '+FORN_ATIVO.nome+'?'))return;
@@ -1559,9 +1562,8 @@ function exportarEncomendaExcel(){
   if(!FORN_ATIVO){toast('Selecione um fornecedor','err');return;}
   const items=ENCOMENDAS[FORN_ATIVO.id]||[];
   if(!items.length){toast('Encomenda vazia','err');return;}
-  const hdr=['Visto','Código','Produto','Un.','Qtd.','Preço unit. €','Total €'];
+  const hdr=['Código','Produto','Un.','Qtd.','Preço unit. €','Total €'];
   const rows=items.map(item=>[
-    item.visto?'✔':'',
     item.cod,
     item.nome,
     item.un||'',
@@ -1570,7 +1572,7 @@ function exportarEncomendaExcel(){
     item.preco>0?Number((item.preco*item.qtd).toFixed(2)):''
   ]);
   const ws=XLSX.utils.aoa_to_sheet([hdr,...rows]);
-  ws['!cols']=[{wch:8},{wch:14},{wch:32},{wch:8},{wch:8},{wch:14},{wch:12}];
+  ws['!cols']=[{wch:14},{wch:32},{wch:8},{wch:8},{wch:14},{wch:12}];
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Encomenda');
   const nomeForn=(FORN_ATIVO.nome||'fornecedor').replace(/[^a-z0-9]+/gi,'_');
   XLSX.writeFile(wb,'PriceCheck_Encomenda_'+nomeForn+'_'+new Date().toISOString().split('T')[0]+'.xlsx');
