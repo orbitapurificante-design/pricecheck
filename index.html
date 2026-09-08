@@ -317,6 +317,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
   <div class="hrow1">
     <button class="hmenu" onclick="toggleDrawer()">&#9776;</button>
     <div class="hlogo">Price<span>Check</span> · Pro</div>
+    <span id="git-status-dot" title="GitHub" style="width:8px;height:8px;border-radius:50%;background:#7a8fba;margin-left:8px;flex-shrink:0;" onclick="abrirConfigGit()"></span>
     <span class="hdate" id="hdate"></span>
   </div>
   <div class="hrow2">
@@ -338,7 +339,11 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
     <div class="dsep">Dados</div>
     <button class="dbtn dbtn-p" onclick="document.getElementById('f-excel').click();fecharTudo()">📊 Carregar Excel de Produtos</button>
     <button class="dbtn dbtn-s" onclick="document.getElementById('f-fotos').click();fecharTudo()">🖼️ Carregar Fotos dos Produtos</button>
-    <div class="dsep">Sincronizar</div>
+    <div class="dsep">GitHub (automático)</div>
+    <button class="dbtn dbtn-p" onclick="enviarParaGitHub();fecharTudo()">⬆️ Enviar preços para GitHub</button>
+    <button class="dbtn dbtn-s" onclick="atualizarDoGitHub();fecharTudo()">⬇️ Atualizar preços do GitHub</button>
+    <button class="dbtn dbtn-s" onclick="abrirConfigGit();fecharTudo()">☁️ Configurar GitHub</button>
+    <div class="dsep">Sincronizar manualmente</div>
     <button class="dbtn dbtn-p" onclick="exportarJSON();fecharTudo()">📤 Exportar Preços (JSON)</button>
     <button class="dbtn dbtn-s" onclick="exportarEWhatsApp();fecharTudo()">💬 Exportar + Enviar WhatsApp</button>
     <button class="dbtn dbtn-s" onclick="document.getElementById('f-import').click();fecharTudo()">📥 Importar Preços (JSON)</button>
@@ -369,6 +374,37 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
     <div style="display:flex;gap:10px;">
       <button onclick="enviarWhatsApp()" style="flex:1;padding:14px;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;background:#25D366;color:#fff;">📲 Abrir WhatsApp</button>
       <button onclick="document.getElementById('wa-modal-bg').classList.remove('open')" style="flex:1;padding:14px;border:1px solid var(--bd);border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;background:var(--s2);color:var(--text);">✕ Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CONFIG GITHUB -->
+<div class="modal-bg" id="git-modal-bg">
+  <div class="modal-card">
+    <div class="mhandle"></div>
+    <div style="font-size:17px;font-weight:700;margin-bottom:4px;text-align:center">☁️ Sincronização GitHub</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:16px;text-align:center">Os preços ficam guardados no teu repositório e atualizam-se sozinhos quando há net</div>
+    <div style="font-size:10px;color:var(--a);text-transform:uppercase;letter-spacing:0.5px;font-weight:700;margin-bottom:6px;">URL do Proxy (servidor que grava)</div>
+    <input type="text" id="git-proxy" placeholder="https://o-teu-proxy.onrender.com/save-xlsx" style="width:100%;background:var(--s2);border:1.5px solid var(--bd);border-radius:8px;padding:12px;color:var(--text);font-size:13px;font-family:'JetBrains Mono',monospace;outline:none;margin-bottom:10px;">
+    <div style="display:flex;gap:8px;margin-bottom:10px;">
+      <div style="flex:1;">
+        <div style="font-size:10px;color:var(--a);text-transform:uppercase;letter-spacing:0.5px;font-weight:700;margin-bottom:6px;">Owner</div>
+        <input type="text" id="git-owner" placeholder="orbitapurificante-design" style="width:100%;background:var(--s2);border:1.5px solid var(--bd);border-radius:8px;padding:12px;color:var(--text);font-size:13px;font-family:Inter,sans-serif;outline:none;">
+      </div>
+      <div style="flex:1;">
+        <div style="font-size:10px;color:var(--a);text-transform:uppercase;letter-spacing:0.5px;font-weight:700;margin-bottom:6px;">Repo</div>
+        <input type="text" id="git-repo" placeholder="pricecheck" style="width:100%;background:var(--s2);border:1.5px solid var(--bd);border-radius:8px;padding:12px;color:var(--text);font-size:13px;font-family:Inter,sans-serif;outline:none;">
+      </div>
+    </div>
+    <div style="font-size:10px;color:var(--a);text-transform:uppercase;letter-spacing:0.5px;font-weight:700;margin-bottom:6px;">Caminho do ficheiro no repo</div>
+    <input type="text" id="git-path" placeholder="dados-precos.json" style="width:100%;background:var(--s2);border:1.5px solid var(--bd);border-radius:8px;padding:12px;color:var(--text);font-size:13px;font-family:'JetBrains Mono',monospace;outline:none;margin-bottom:10px;">
+    <div style="font-size:10px;color:var(--a);text-transform:uppercase;letter-spacing:0.5px;font-weight:700;margin-bottom:6px;">Branch</div>
+    <input type="text" id="git-branch" placeholder="main" style="width:100%;background:var(--s2);border:1.5px solid var(--bd);border-radius:8px;padding:12px;color:var(--text);font-size:13px;font-family:'JetBrains Mono',monospace;outline:none;margin-bottom:10px;">
+    <div style="font-size:10px;color:var(--a);text-transform:uppercase;letter-spacing:0.5px;font-weight:700;margin-bottom:6px;">URL Raw (para ler sem token)</div>
+    <input type="text" id="git-raw" placeholder="https://raw.githubusercontent.com/orbitapurificante-design/pricecheck/main/dados-precos.json" style="width:100%;background:var(--s2);border:1.5px solid var(--bd);border-radius:8px;padding:12px;color:var(--text);font-size:12px;font-family:'JetBrains Mono',monospace;outline:none;margin-bottom:14px;">
+    <div style="display:flex;gap:10px;">
+      <button onclick="fecharConfigGit()" style="flex:1;padding:14px;border:1px solid var(--bd);border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;background:var(--s2);color:var(--text);">Cancelar</button>
+      <button onclick="guardarConfigGit()" style="flex:1;padding:14px;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;background:var(--a);color:#1a2340;">Guardar</button>
     </div>
   </div>
 </div>
@@ -649,14 +685,159 @@ function carregar(){
   try{const d=localStorage.getItem('PC_VISTOS');if(d)VISTOS=JSON.parse(d);}catch(e){}
   try{const d=localStorage.getItem('PC_NID');if(d)FORN_NEXT_ID=parseInt(d);}catch(e){}
 }
-function salvarForn(){localStorage.setItem('PC_FORN',JSON.stringify(FORNECEDORES));localStorage.setItem('PC_NID',String(FORN_NEXT_ID));}
-function salvarPrecos(){localStorage.setItem('PC_PREC',JSON.stringify(PRECOS_DB));}
+function salvarForn(){localStorage.setItem('PC_FORN',JSON.stringify(FORNECEDORES));localStorage.setItem('PC_NID',String(FORN_NEXT_ID));marcarSyncPendente();}
+function salvarPrecos(){localStorage.setItem('PC_PREC',JSON.stringify(PRECOS_DB));marcarSyncPendente();}
 function salvarVistos(){localStorage.setItem('PC_VISTOS',JSON.stringify(VISTOS));}
 function toggleVisto(cod,checked){
   VISTOS[cod]=!!checked;
   salvarVistos();
 }
 function salvarFornAtivo(){localStorage.setItem('PC_FA',JSON.stringify(FORN_ATIVO));}
+
+// ══ GITHUB SYNC (base partilhada — offline-first, sincroniza sozinho quando há net) ══
+const GIT_CFG_KEY='PC_GITCFG';
+let GIT_CFG={proxy:'',owner:'orbitapurificante-design',repo:'pricecheck',path:'dados-precos.json',branch:'main',rawUrl:'https://raw.githubusercontent.com/orbitapurificante-design/pricecheck/main/dados-precos.json'};
+let gitSyncPendente=false;
+let _gitPushTimer=null;
+
+function carregarConfigGit(){
+  try{const d=localStorage.getItem(GIT_CFG_KEY);if(d)GIT_CFG=Object.assign({},GIT_CFG,JSON.parse(d));}catch(e){}
+  try{gitSyncPendente=localStorage.getItem('PC_GIT_PENDENTE')==='1';}catch(e){}
+}
+function guardarConfigGitState(){localStorage.setItem(GIT_CFG_KEY,JSON.stringify(GIT_CFG));}
+
+function marcarSyncPendente(){
+  gitSyncPendente=true;
+  localStorage.setItem('PC_GIT_PENDENTE','1');
+  atualizarGitStatus();
+  clearTimeout(_gitPushTimer);
+  _gitPushTimer=setTimeout(()=>{ if(navigator.onLine) enviarParaGitHub(true); }, 4000);
+}
+
+function atualizarGitStatus(){
+  const el=document.getElementById('git-status-dot');
+  if(!el)return;
+  if(!GIT_CFG.proxy&&!GIT_CFG.rawUrl){el.style.background='#7a8fba';el.title='GitHub não configurado — toque para configurar';}
+  else if(!navigator.onLine){el.style.background='#ef4444';el.title='Offline — vai sincronizar quando voltar a net';}
+  else if(gitSyncPendente){el.style.background='#f59e0b';el.title='Alterações por sincronizar';}
+  else{el.style.background='#10b981';el.title='Sincronizado com o GitHub';}
+}
+
+function abrirConfigGit(){
+  document.getElementById('git-proxy').value=GIT_CFG.proxy;
+  document.getElementById('git-owner').value=GIT_CFG.owner;
+  document.getElementById('git-repo').value=GIT_CFG.repo;
+  document.getElementById('git-path').value=GIT_CFG.path;
+  document.getElementById('git-branch').value=GIT_CFG.branch;
+  document.getElementById('git-raw').value=GIT_CFG.rawUrl;
+  document.getElementById('git-modal-bg').classList.add('open');
+}
+function fecharConfigGit(){document.getElementById('git-modal-bg').classList.remove('open');}
+function guardarConfigGit(){
+  GIT_CFG={
+    proxy:document.getElementById('git-proxy').value.trim(),
+    owner:document.getElementById('git-owner').value.trim(),
+    repo:document.getElementById('git-repo').value.trim(),
+    path:document.getElementById('git-path').value.trim(),
+    branch:document.getElementById('git-branch').value.trim()||'main',
+    rawUrl:document.getElementById('git-raw').value.trim(),
+  };
+  guardarConfigGitState();
+  fecharConfigGit();
+  atualizarGitStatus();
+  toast('✓ Configuração GitHub guardada','ok');
+}
+
+// Merge inteligente reutilizável (mesma lógica do import manual de JSON)
+function importarPayloadJSON(jsonStr, silencioso){
+  const data=JSON.parse(jsonStr);
+  if(!data.precos)throw new Error('Ficheiro inválido');
+  let fornAdded=0;
+  if(data.fornecedores&&Array.isArray(data.fornecedores)){
+    data.fornecedores.forEach(f=>{
+      const existe=FORNECEDORES.find(x=>String(x.id)===String(f.id)||x.nome===f.nome);
+      if(!existe){FORNECEDORES.push(f);fornAdded++;}
+    });
+    if(fornAdded){localStorage.setItem('PC_FORN',JSON.stringify(FORNECEDORES));localStorage.setItem('PC_NID',String(FORN_NEXT_ID));}
+  }
+  let precosAdded=0;
+  Object.keys(data.precos).forEach(cod=>{
+    if(!PRECOS_DB[cod])PRECOS_DB[cod]={};
+    Object.keys(data.precos[cod]).forEach(fid=>{
+      if(!PRECOS_DB[cod][fid])PRECOS_DB[cod][fid]=[];
+      const existentes=PRECOS_DB[cod][fid].map(x=>x.data+'|'+x.preco);
+      data.precos[cod][fid].forEach(entrada=>{
+        const key=entrada.data+'|'+entrada.preco;
+        if(!existentes.includes(key)){
+          PRECOS_DB[cod][fid].push(entrada);
+          precosAdded++;
+        }
+      });
+    });
+  });
+  localStorage.setItem('PC_PREC',JSON.stringify(PRECOS_DB));
+  atualizarStats();
+  if(!silencioso)toast('✓ Merge: +'+precosAdded+' preços, +'+fornAdded+' fornecedores','ok');
+  return {precosAdded,fornAdded};
+}
+
+async function enviarParaGitHub(silencioso){
+  if(!GIT_CFG.proxy||!GIT_CFG.owner||!GIT_CFG.repo||!GIT_CFG.path){
+    if(!silencioso){toast('Configura o GitHub primeiro','err');abrirConfigGit();}
+    return false;
+  }
+  if(!navigator.onLine){
+    if(!silencioso)toast('Sem ligação — vai sincronizar quando voltar a net','err');
+    return false;
+  }
+  try{
+    const payload=gerarPayloadJSON();
+    const base64=btoa(unescape(encodeURIComponent(payload)));
+    const resp=await fetch(GIT_CFG.proxy,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({owner:GIT_CFG.owner,repo:GIT_CFG.repo,path:GIT_CFG.path,branch:GIT_CFG.branch,contentBase64:base64,message:'PriceCheck — atualização automática de preços'})
+    });
+    const json=await resp.json();
+    if(!resp.ok)throw new Error((json&&(json.error&&json.error.message||json.error))||'Falha ao gravar');
+    gitSyncPendente=false;
+    localStorage.setItem('PC_GIT_PENDENTE','0');
+    atualizarGitStatus();
+    if(!silencioso)toast('✓ Sincronizado com o GitHub','ok');
+    return true;
+  }catch(err){
+    if(!silencioso)toast('Erro ao sincronizar: '+err.message,'err');
+    return false;
+  }
+}
+
+async function atualizarDoGitHub(silencioso){
+  if(!GIT_CFG.rawUrl){
+    if(!silencioso){toast('Configura o URL Raw primeiro','err');abrirConfigGit();}
+    return false;
+  }
+  if(!navigator.onLine){
+    if(!silencioso)toast('Sem ligação à internet','err');
+    return false;
+  }
+  try{
+    const resp=await fetch(GIT_CFG.rawUrl+'?t='+Date.now());
+    if(!resp.ok)throw new Error('Ficheiro ainda não existe no GitHub (envia primeiro uma vez)');
+    const txt=await resp.text();
+    importarPayloadJSON(txt, silencioso);
+    if(!silencioso)toast('✓ Atualizado a partir do GitHub','ok');
+    return true;
+  }catch(err){
+    if(!silencioso)toast('Erro ao atualizar: '+err.message,'err');
+    return false;
+  }
+}
+
+window.addEventListener('online',()=>{
+  atualizarGitStatus();
+  if(gitSyncPendente)enviarParaGitHub(true);
+});
+window.addEventListener('offline',atualizarGitStatus);
 
 // ══ NAV — cada tab mostra SÓ o seu conteúdo ══
 function nav(id){
@@ -1798,9 +1979,11 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&encScannerAberto)fe
   await abrirImgDB();
   await carregarTodasImgsDB();
   carregar();carregarEncomendas();atualizarHeaderForn();atualizarStats();
+  carregarConfigGit();atualizarGitStatus();
+  if(GIT_CFG.rawUrl)atualizarDoGitHub(true);
   setTimeout(abrirScanner,400);
 })();
-['pmodal-bg','nmodal-bg','hmodal-bg','fmodal-bg','em-modal-bg','wa-modal-bg'].forEach(id=>{
+['pmodal-bg','nmodal-bg','hmodal-bg','fmodal-bg','em-modal-bg','wa-modal-bg','git-modal-bg'].forEach(id=>{
   document.getElementById(id).addEventListener('click',function(e){
     if(e.target===this){this.classList.remove('open');if(id==='fmodal-bg')fecharFornModal();}
   });
