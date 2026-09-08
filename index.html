@@ -338,6 +338,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
   <div class="drawer-body">
     <div class="dsep">Dados</div>
     <button class="dbtn dbtn-p" onclick="document.getElementById('f-excel').click();fecharTudo()">📊 Carregar Excel de Produtos</button>
+    <button class="dbtn dbtn-s" onclick="atualizarProdutosDoGitHub();fecharTudo()">⬇️ Atualizar Produtos do GitHub</button>
     <button class="dbtn dbtn-s" onclick="document.getElementById('f-fotos').click();fecharTudo()">🖼️ Carregar Fotos dos Produtos</button>
     <div class="dsep">GitHub (automático)</div>
     <button class="dbtn dbtn-p" onclick="enviarParaGitHub();fecharTudo()">⬆️ Enviar preços para GitHub</button>
@@ -402,6 +403,9 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
     <input type="text" id="git-branch" placeholder="main" style="width:100%;background:var(--s2);border:1.5px solid var(--bd);border-radius:8px;padding:12px;color:var(--text);font-size:13px;font-family:'JetBrains Mono',monospace;outline:none;margin-bottom:10px;">
     <div style="font-size:10px;color:var(--a);text-transform:uppercase;letter-spacing:0.5px;font-weight:700;margin-bottom:6px;">URL Raw (para ler sem token)</div>
     <input type="text" id="git-raw" placeholder="https://raw.githubusercontent.com/orbitapurificante-design/pricecheck/main/dados-precos.json" style="width:100%;background:var(--s2);border:1.5px solid var(--bd);border-radius:8px;padding:12px;color:var(--text);font-size:12px;font-family:'JetBrains Mono',monospace;outline:none;margin-bottom:14px;">
+    <div style="font-size:10px;color:var(--a2);text-transform:uppercase;letter-spacing:0.5px;font-weight:700;margin-bottom:6px;">URL Raw do ficheiro de PRODUTOS (.xlsx)</div>
+    <input type="text" id="git-raw-produtos" placeholder="https://raw.githubusercontent.com/orbitapurificante-design/pricecheck/main/produtos.xlsx" style="width:100%;background:var(--s2);border:1.5px solid rgba(16,185,129,0.3);border-radius:8px;padding:12px;color:var(--text);font-size:12px;font-family:'JetBrains Mono',monospace;outline:none;margin-bottom:6px;">
+    <div style="font-size:10.5px;color:var(--muted);margin-bottom:14px;line-height:1.5;">Basta atualizares este ficheiro no GitHub (upload direto ou pelo editor Excel base) — a app vai buscá-lo sozinha, sem precisar do proxy.</div>
     <div style="display:flex;gap:10px;">
       <button onclick="fecharConfigGit()" style="flex:1;padding:14px;border:1px solid var(--bd);border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;background:var(--s2);color:var(--text);">Cancelar</button>
       <button onclick="guardarConfigGit()" style="flex:1;padding:14px;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;background:var(--a);color:#1a2340;">Guardar</button>
@@ -696,7 +700,7 @@ function salvarFornAtivo(){localStorage.setItem('PC_FA',JSON.stringify(FORN_ATIV
 
 // ══ GITHUB SYNC (base partilhada — offline-first, sincroniza sozinho quando há net) ══
 const GIT_CFG_KEY='PC_GITCFG';
-let GIT_CFG={proxy:'',owner:'orbitapurificante-design',repo:'pricecheck',path:'dados-precos.json',branch:'main',rawUrl:'https://raw.githubusercontent.com/orbitapurificante-design/pricecheck/main/dados-precos.json'};
+let GIT_CFG={proxy:'',owner:'orbitapurificante-design',repo:'pricecheck',path:'dados-precos.json',branch:'main',rawUrl:'https://raw.githubusercontent.com/orbitapurificante-design/pricecheck/main/dados-precos.json',produtosRawUrl:'https://raw.githubusercontent.com/orbitapurificante-design/pricecheck/main/produtos.xlsx'};
 let gitSyncPendente=false;
 let _gitPushTimer=null;
 
@@ -730,6 +734,7 @@ function abrirConfigGit(){
   document.getElementById('git-path').value=GIT_CFG.path;
   document.getElementById('git-branch').value=GIT_CFG.branch;
   document.getElementById('git-raw').value=GIT_CFG.rawUrl;
+  document.getElementById('git-raw-produtos').value=GIT_CFG.produtosRawUrl;
   document.getElementById('git-modal-bg').classList.add('open');
 }
 function fecharConfigGit(){document.getElementById('git-modal-bg').classList.remove('open');}
@@ -741,6 +746,7 @@ function guardarConfigGit(){
     path:document.getElementById('git-path').value.trim(),
     branch:document.getElementById('git-branch').value.trim()||'main',
     rawUrl:document.getElementById('git-raw').value.trim(),
+    produtosRawUrl:document.getElementById('git-raw-produtos').value.trim(),
   };
   guardarConfigGitState();
   fecharConfigGit();
@@ -836,6 +842,7 @@ async function atualizarDoGitHub(silencioso){
 window.addEventListener('online',()=>{
   atualizarGitStatus();
   if(gitSyncPendente)enviarParaGitHub(true);
+  atualizarProdutosDoGitHub(true);
 });
 window.addEventListener('offline',atualizarGitStatus);
 
@@ -858,28 +865,58 @@ function toggleDrawer(){const d=document.getElementById('drawer'),o=document.get
 function fecharDrawer(){document.getElementById('drawer').classList.remove('open');document.getElementById('overlay').style.display='none';}
 
 // ══ EXCEL ══
+function processarWorkbookProdutos(wb, silencioso){
+  const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''}).slice(1);
+  DADOS=rows.map((r,i)=>({
+    id:i,cod:String(r[0]||'').trim(),ean:String(r[1]||'').trim(),
+    nome:String(r[2]||r[1]||r[0]||'').trim(),
+    preco:parseFloat(String(r[3]||0).replace(',','.'))||0,
+    precoCusto:parseFloat(String(r[4]||0).replace(',','.'))||0,
+    un:String(r[5]||r[6]||'').trim(),cat:String(r[8]||'GERAL').toUpperCase().trim(),
+    f:String(r[10]||'').trim(),
+  })).filter(p=>p.nome);
+  localStorage.setItem('PC_PROD',JSON.stringify(DADOS));
+  atualizarStats();
+  if(!silencioso)toast('✓ '+DADOS.length+' produtos carregados','ok');
+  if(typeof m2Ativo==='function'&&m2Ativo())renderProdutos();
+}
+
 document.getElementById('f-excel').onchange=function(e){
   const file=e.target.files[0];if(!file)return;
   const r=new FileReader();
   r.onload=ev=>{
     try{
       const wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array'});
-      const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''}).slice(1);
-      DADOS=rows.map((r,i)=>({
-        id:i,cod:String(r[0]||'').trim(),ean:String(r[1]||'').trim(),
-        nome:String(r[2]||r[1]||r[0]||'').trim(),
-        preco:parseFloat(String(r[3]||0).replace(',','.'))||0,
-        precoCusto:parseFloat(String(r[4]||0).replace(',','.'))||0,
-        un:String(r[5]||r[6]||'').trim(),cat:String(r[8]||'GERAL').toUpperCase().trim(),
-        f:String(r[10]||'').trim(),
-      })).filter(p=>p.nome);
-      localStorage.setItem('PC_PROD',JSON.stringify(DADOS));
-      atualizarStats();toast('✓ '+DADOS.length+' produtos carregados','ok');
+      processarWorkbookProdutos(wb,false);
     }catch(err){toast('Erro: '+err.message,'err');}
     e.target.value='';
   };
   r.readAsArrayBuffer(file);
 };
+
+// ── Atualizar produtos diretamente do ficheiro .xlsx alojado no GitHub ──
+async function atualizarProdutosDoGitHub(silencioso){
+  if(!GIT_CFG.produtosRawUrl){
+    if(!silencioso){toast('Configura o URL dos Produtos primeiro','err');abrirConfigGit();}
+    return false;
+  }
+  if(!navigator.onLine){
+    if(!silencioso)toast('Sem ligação à internet','err');
+    return false;
+  }
+  try{
+    const resp=await fetch(GIT_CFG.produtosRawUrl+'?t='+Date.now());
+    if(!resp.ok)throw new Error('Ficheiro de produtos não encontrado no GitHub (verifica o URL)');
+    const buf=await resp.arrayBuffer();
+    const wb=XLSX.read(new Uint8Array(buf),{type:'array'});
+    processarWorkbookProdutos(wb, true);
+    if(!silencioso)toast('✓ '+DADOS.length+' produtos atualizados do GitHub','ok');
+    return true;
+  }catch(err){
+    if(!silencioso)toast('Erro ao atualizar produtos: '+err.message,'err');
+    return false;
+  }
+}
 
 document.getElementById('f-fotos').onchange=async function(e){
   const files=Array.from(e.target.files);if(!files.length)return;
@@ -1981,6 +2018,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&encScannerAberto)fe
   carregar();carregarEncomendas();atualizarHeaderForn();atualizarStats();
   carregarConfigGit();atualizarGitStatus();
   if(GIT_CFG.rawUrl)atualizarDoGitHub(true);
+  if(GIT_CFG.produtosRawUrl)atualizarProdutosDoGitHub(true);
   setTimeout(abrirScanner,400);
 })();
 ['pmodal-bg','nmodal-bg','hmodal-bg','fmodal-bg','em-modal-bg','wa-modal-bg','git-modal-bg'].forEach(id=>{
