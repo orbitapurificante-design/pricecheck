@@ -2370,46 +2370,52 @@ function fatValorCelula(t,permitirInt){
 }
 // procura o cabeçalho do preço: Preço, Preço Unit., Pr.Un, P.Unit, PU, Vl.Unit … (s/IVA tem prioridade; nunca c/IVA, PVP, Total)
 function fatNm(t){return fatSemAcentos(t).replace(/[^a-z0-9\/]/g,'');}
-const FAT_RE_PRECO=/^(preco|prec|prc|pr|pu|pun|puni|punit|prun|pruni|prunit|prunid|pcunit|pcun|pcu|unit|vlunit|vlrunit|vunit|valorunit|vl|vlr|preoun|precounit)/;
-const FAT_RE_QTD=/^(qt|qtd|qtde|qtt|qtdd|quant|quantidade|qnt|qtdade)/;
+// cabeçalhos de PREÇO (curtos têm de ser exatos para não apanhar "Produto", "Público"…)
+const FAT_PRECO_EXATO=/^(pr|pu|pun|puni|punit|prun|pruni|prunit|prunid|pcun|pcu|pcunit|pvu|vunit|vlunit|vlrunit|unit|prc|prec|preco|precos|precounit|precounitario|valorunit|valorunitario|vlrunitario|vlunitario|unitario)$/;
+const FAT_PRECO_INICIO=/^(preco|precounit|prunit|punit|vlunit|vlrunit|valorunit|unitario)/;
+// cabeçalhos de OUTRAS colunas (nunca podem fazer parte da coluna de preço)
+const FAT_OUTRAS=/^(qt|qtd|qtde|qtt|qtdd|quant|quantidade|qnt|qtdade|un|und|unid|unidade|uni|desc|descont|descontos|desconto|%|iva|total|valor|importancia|base|taxa|lote|cod|codigo|ref|artigo|descricao|designacao|produto|pvp|c\/?iva|civa|c\/|com|liq|liquido)/;
+function fatEhPreco(t){return FAT_PRECO_EXATO.test(t)||FAT_PRECO_INICIO.test(t);}
 function fatDetetarColunaPreco(zona,W,extra){
   const ws=[];zona.forEach(l=>l.words.forEach(w=>{if(w.t&&!/^[\d.,%€\-]+$/.test(w.t))ws.push(w);}));
   const ex=extra?fatNm(extra):'';
-  const ehPreco=t=>{
-    if(ex)return t.startsWith(ex);
-    if(!FAT_RE_PRECO.test(t))return false;
-    if(/^(vl|vlr)$/.test(t))return false;           // "Vl." sozinho pode ser valor/total
-    if(/^(pr|pu|un|uni|unid|unidade)$/.test(t)&&false)return false;
-    return true;
-  };
-  const cands=ws.filter(w=>ehPreco(fatNm(w.t)));
+  const cands=ws.filter(w=>{const t=fatNm(w.t);return ex?(t.length>=2&&t.startsWith(ex)):fatEhPreco(t);});
   let best=null;
   cands.forEach(c=>{
-    const cy=(c.y0+c.y1)/2,h=Math.max(c.y1-c.y0,10);
-    // palavras do cabeçalho: mesma linha e linha imediatamente acima/abaixo (cabeçalhos em 2 linhas)
+    const cy=(c.y0+c.y1)/2,h=Math.max(c.y1-c.y0,10),cw=Math.max(c.x1-c.x0,10);
     const band=ws.filter(w=>Math.abs((w.y0+w.y1)/2-cy)<=h*2.2);
-    const cx=(c.x0+c.x1)/2,tol=Math.max((c.x1-c.x0)*1.4,W*0.06);
-    const col=band.filter(w=>Math.abs((w.x0+w.x1)/2-cx)<=tol);
+    // faz parte da coluna: a própria palavra, palavras empilhadas por cima/baixo (sobrepõem em x)
+    // e complementos colados ("Unit.", "s/IVA") — mas NUNCA cabeçalhos de outras colunas (Qtd, Desc, IVA, Total…)
+    const col=band.filter(w=>{
+      if(w===c)return true;
+      const t=fatNm(w.t);
+      const complemento=/^(unit|s\/?iva|siva|sem|s\/|iva|un|uni|unid|unitario)$/.test(t)||fatEhPreco(t);
+      const sobrepoe=w.x1>=c.x0-cw*0.15&&w.x0<=c.x1+cw*0.15;
+      const gap=Math.max(0,w.x0-c.x1,c.x0-w.x1);
+      if(/^(qt|qtd|qtde|quant|quantidade|desc|descont|total|pvp|valor|c\/?iva|civa|c\/)/.test(t))return false;
+      return sobrepoe||(complemento&&gap<=cw*1.5);
+    });
     const nms=col.map(w=>fatNm(w.t));
     let sc=1;
-    if(nms.some(t=>/^(unit|punit|prun|pun|pu)/.test(t)))sc+=1;
+    if(nms.some(t=>/^(unit|punit|prun|pun|pu|unitario)/.test(t)))sc+=1;
     if(nms.some(t=>/^(s\/?iva|siva|sem|s\/|liquido|liq)$/.test(t)))sc+=3;
-    if(nms.some(t=>/^(c\/?iva|civa|c\/|com|pvp|total|desc|descont|valor|importancia|base)/.test(t)))sc-=10;
+    if(band.some(w=>col.includes(w)&&/^(c\/?iva|civa|c\/|com|pvp|total)/.test(fatNm(w.t))))sc-=10;
     if(ex)sc+=5;
     if(!best||sc>best.sc){
       const outros=band.filter(w=>!col.includes(w));
       best={sc,col,outros,x0:Math.min(...col.map(w=>w.x0)),x1:Math.max(...col.map(w=>w.x1)),
-            texto:col.slice().sort((a,b)=>a.x0-b.x0).map(w=>w.t).join(' ')};
+            texto:col.slice().sort((a,b)=>a.x0-b.x0).map(w=>w.t).join(' '),
+            cabecalhos:band.slice().sort((a,b)=>a.x0-b.x0).map(w=>w.t).join(' | ')};
     }
   });
   return best&&best.sc>=1?best:null;
 }
-// escolhe o valor da linha cujo cabeçalho MAIS PRÓXIMO é o do preço (assim a Qtd, Desc, IVA e Total ficam de fora)
+// escolhe o valor da linha cujo cabeçalho MAIS PRÓXIMO é o do preço (Qtd, Desc, IVA, Total ficam de fora)
 function fatPrecoPorColuna(l,col){
   if(!col||!l.words.length)return null;
   const dist=(w,a)=>{
     const wc=(w.x0+w.x1)/2,ac=(a.x0+a.x1)/2;
-    const gap=Math.max(0,a.x0-w.x1,w.x0-a.x1);          // 0 se sobrepõe
+    const gap=Math.max(0,a.x0-w.x1,w.x0-a.x1);
     return gap*2+Math.abs(wc-ac)*0.5;
   };
   const cands=[];
@@ -2418,10 +2424,9 @@ function fatPrecoPorColuna(l,col){
     if(v==null||v<=0)return;
     const dP=Math.min(...col.col.map(a=>dist(w,a)));
     const dO=col.outros.length?Math.min(...col.outros.map(a=>dist(w,a))):1e9;
-    if(dP<=dO)cands.push({v,dP,dec:/[.,]\d{2,4}$/.test(String(w.t))});
+    if(dP<dO)cands.push({v,dP,dec:/[.,]\d{2,4}$/.test(String(w.t))});
   });
   if(!cands.length)return null;
-  // preferir valores com casas decimais; depois o mais próximo do cabeçalho
   cands.sort((a,b)=>(b.dec-a.dec)||(a.dP-b.dP));
   return cands[0].v;
 }
@@ -2509,7 +2514,7 @@ function renderFatura(){
   const nOk=L.filter(x=>!x.fora).length,nFora=L.length-nOk;
   document.getElementById('fat-sum').innerHTML=
     `✓ <b>${nOk}</b> artigo(s) da sua base encontrados`+(nFora?` · ${nFora} código(s) fora da base`:'')+
-    `<br>Preço: ${FAT.col?'coluna «'+String(FAT.col.texto).replace(/</g,'&lt;')+'» detetada':'coluna de preço NÃO detetada — escreva o cabeçalho (ex: PR.un) e toque em Reler'}`+
+    `<br>Preço: ${FAT.col?'coluna «'+String(FAT.col.texto).replace(/</g,'&lt;')+'» detetada <span style="opacity:.7">(cabeçalho lido: '+String(FAT.col.cabecalhos).replace(/</g,'&lt;')+')</span>':'coluna de preço NÃO detetada — escreva o cabeçalho (ex: PR.un) e toque em Reler'}`+
     `<br>Fornecedor: ${FAT.fornDetetado?'detetado na fatura':'fornecedor ativo / escolha manual'} · Data: ${FAT.dataDetetada?'detetada na fatura':'hoje'}`;
   if(!L.length){
     box.innerHTML='<div class="fat-empty">Nenhum código da sua base foi reconhecido.<br>Tente outra foto: de frente, boa luz, sem sombras, só a tabela de artigos.</div>';
@@ -2532,11 +2537,15 @@ function renderFatura(){
   fatRefreshAnteriores();
 }
 function fatReanalisar(){
-  if(!FAT.data)return;
+  if(!FAT.data){toast('Tire primeiro a foto da fatura','err');return;}
   const nome=document.getElementById('fat-col').value.trim();
   const fid=document.getElementById('fat-forn').value;
   try{if(fid)localStorage.setItem('PC_FAT_COL_'+fid,nome);}catch(e){}   // lembra para este fornecedor
-  analisarFatura(FAT.data,FAT.W,nome,true);
+  try{
+    analisarFatura(FAT.data,FAT.W,nome,true);
+    const n=FAT.linhas.length;
+    toast(FAT.col?('✓ Coluna «'+FAT.col.texto+'» · '+n+' artigo(s)'):('Coluna «'+(nome||'?')+'» não encontrada na foto'),FAT.col?'ok':'err');
+  }catch(err){console.error(err);toast('Erro ao reler: '+(err.message||err),'err');}
 }
 function fatSetPreco(i,v){document.getElementById('fat-preco-'+i).value=v;fatRefreshAnteriores();}
 function fatRefreshAnteriores(){
