@@ -376,6 +376,21 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
 .frep-b{border:none;border-radius:8px;padding:8px 10px;font-size:13px;cursor:pointer;flex-shrink:0;}
 .frep-b.ok{background:var(--a2);color:#fff;} .frep-b.x{background:rgba(239,68,68,.15);color:var(--danger);}
 .frep-delall{width:100%;padding:11px;border:1px solid rgba(239,68,68,.25);border-radius:var(--r8);background:rgba(239,68,68,.06);color:var(--danger);font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;margin-bottom:8px;}
+
+/* ── MARCAR COLUNA NA FOTO ── */
+#fat-tap-bg{position:fixed;inset:0;z-index:9400;background:#0b1020;display:none;flex-direction:column;}
+#fat-tap-bg.open{display:flex;}
+.fat-tap-top{padding:12px 14px;background:var(--s1);border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:8px;}
+.fat-tap-top .t{flex:1;font-size:13px;font-weight:700;line-height:1.25;}
+.fat-tap-top .t small{display:block;font-weight:500;color:var(--muted);font-size:11px;margin-top:2px;}
+.fat-tap-top button{border:none;border-radius:8px;padding:9px 12px;font-weight:700;font-size:13px;cursor:pointer;background:var(--s2);color:var(--text);border:1px solid var(--bd2);}
+.fat-tap-wrap{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;background:#000;}
+.fat-tap-stage{position:relative;width:100%;}
+.fat-tap-stage img{display:block;width:100%;height:auto;}
+.fat-box{position:absolute;border:2px solid rgba(201,168,76,.9);background:rgba(201,168,76,.18);border-radius:3px;cursor:pointer;}
+.fat-box.dim{border-color:rgba(148,163,184,.7);background:rgba(148,163,184,.12);}
+.fat-box:active{background:rgba(16,185,129,.55);border-color:#10b981;}
+.fat-raw{display:none;white-space:pre-wrap;font-family:'JetBrains Mono',monospace;font-size:10px;background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:8px;max-height:30vh;overflow:auto;margin-bottom:10px;color:var(--muted);}
 </style>
 </head>
 <body>
@@ -702,6 +717,16 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
   </div>
 </div>
 
+<!-- FATURA: marcar coluna na foto -->
+<div id="fat-tap-bg">
+  <div class="fat-tap-top">
+    <div class="t">Toque num PREÇO (de qualquer artigo)<small id="fat-tap-sub">Os números a dourado são produtos da sua base</small></div>
+    <button onclick="fatZoom(-1)">－</button><button onclick="fatZoom(1)">＋</button>
+    <button onclick="fatFecharTap()">✕</button>
+  </div>
+  <div class="fat-tap-wrap"><div class="fat-tap-stage" id="fat-tap-stage"></div></div>
+</div>
+
 <!-- FATURA OCR -->
 <input type="file" id="f-fat-cam" accept="image/*" capture="environment" style="display:none">
 <input type="file" id="f-fat-gal" accept="image/*" style="display:none">
@@ -722,10 +747,13 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
         <div><label>Data</label><input type="date" id="fat-data"></div>
       </div>
       <div class="fat-sum" id="fat-sum"></div>
+      <button class="em-btn em-ok" style="width:100%;margin-bottom:10px" onclick="fatAbrirTap()">👆 Marcar a coluna do PREÇO na foto</button>
       <div class="fat-meta" style="align-items:flex-end">
         <div><label>Coluna do preço (cabeçalho)</label><input type="text" id="fat-col" placeholder="ex: PR.un, Preço Unit"></div>
         <div style="flex:0 0 auto"><button class="em-btn em-ok" style="padding:9px 14px;font-size:12px" onclick="fatReanalisar()">🔄 Reler</button></div>
       </div>
+      <button class="em-btn em-cancel" style="width:100%;margin-bottom:8px;font-size:11px;padding:8px" onclick="var e=document.getElementById('fat-raw');e.style.display=e.style.display==='block'?'none':'block'">📄 Ver texto lido pelo OCR</button>
+      <div class="fat-raw" id="fat-raw"></div>
       <div class="fat-list" id="fat-list"></div>
       <div class="em-btns">
         <button class="em-btn em-cancel" onclick="fatNova()">🔄 Outra foto</button>
@@ -2221,6 +2249,7 @@ async function processarFatura(file){
   try{
     fatProg('A preparar imagem…',0.03);
     const {canvas,url}=await prepararImagemFatura(file);
+    FAT.canvas=canvas;FAT.teach=null;
     const prev=document.getElementById('fat-prev');prev.src=url;prev.style.display='block';
     fatProg('A carregar leitor de texto…',0.08);
     await carregarTesseract();
@@ -2293,22 +2322,24 @@ function fatNumeros(linha,tokensCod){
   return out;
 }
 function fatEscolherPreco(nums,descPct){
-  // 1) qtd × preço (− desconto) = total na mesma linha
-  for(let k=nums.length-1;k>=2;k--){
+  // 1) qtd × preço (− desconto) = total, com o TOTAL a ser um dos 2 últimos valores e o preço com casas decimais
+  const fim=nums.length;
+  for(let k=fim-1;k>=Math.max(2,fim-2);k--){
+    const tot=nums[k].v;
     for(let i=0;i<k;i++)for(let j=i+1;j<k;j++){
-      const A=nums[i],B=nums[j],tot=nums[k].v;
-      if(!(A.v>0&&B.v>0))continue;
+      const A=nums[i],B=nums[j];
+      if(!(A.v>0&&B.v>0)||!(A.dec||B.dec))continue;
       const fatores=[1];(descPct||[]).forEach(d=>fatores.push(1-d/100));
       for(const f of fatores){
         if(Math.abs(A.v*B.v*f-tot)<=Math.max(0.02,tot*0.006)){
-          // o preço é o que tem casas decimais; se ambos têm, é o 2.º (qtd costuma vir antes)
-          if(Number.isInteger(B.v)&&!Number.isInteger(A.v))return A.v;
+          if(A.dec&&!B.dec)return A.v;
+          if(B.dec&&!A.dec)return B.v;
           return B.v;
         }
       }
     }
   }
-  // 2) sem prova matemática: a 1.ª coluna decimal costuma ser a QUANTIDADE se houver 3+ valores decimais
+  // 2) sem prova: com 3+ valores decimais a 1.ª costuma ser a quantidade
   const ds=nums.filter(n=>n.dec&&n.v>0);
   if(ds.length>=3)return ds[1].v;
   return ds.length?ds[0].v:null;
@@ -2411,6 +2442,35 @@ function fatDetetarColunaPreco(zona,W,extra){
   return best&&best.sc>=1?best:null;
 }
 // escolhe o valor da linha cujo cabeçalho MAIS PRÓXIMO é o do preço (Qtd, Desc, IVA, Total ficam de fora)
+function fatEhNumero(t){
+  const x=String(t).replace(/[€*]/g,'').trim();
+  if(/%$/.test(x)||/\//.test(x))return false;
+  if(/^\d{7,}$/.test(x))return false;                       // códigos / EAN
+  return /^\d{1,3}(\.\d{3})+,\d{1,4}$/.test(x)||/^\d+([.,]\d+)?$/.test(x);
+}
+function fatValorNum(t){
+  const x=String(t).replace(/[€*]/g,'').trim();
+  return /^\d{1,3}(\.\d{3})+,/.test(x)?parseFloat(x.replace(/\./g,'').replace(',','.')):parseFloat(x.replace(',','.'));
+}
+function fatNumPalavras(l){return l.words.filter(w=>fatEhNumero(w.t)&&!isNaN(fatValorNum(w.t)));}
+function fatPrecoPorTeach(l,t){
+  const nw=fatNumPalavras(l);
+  if(!nw.length)return null;
+  const xn=()=>{ // palavra mais próxima da coluna marcada
+    let b=null,bd=1e9;
+    nw.forEach(w=>{const d=Math.abs((w.x0+w.x1)/2-t.cx);if(d<bd){bd=d;b=w;}});
+    return bd<=t.tol?b:null;
+  };
+  let w=null;
+  if(nw.length===t.n){                                        // mesma estrutura da linha marcada → mesma posição
+    const c=nw[nw.length-1-t.rankR];
+    if(c&&Math.abs((c.x0+c.x1)/2-t.cx)<=t.tol*4)w=c;
+  }
+  if(!w)w=xn();
+  if(!w)return null;
+  const v=fatValorNum(w.t);
+  return v>0?v:null;
+}
 function fatPrecoPorColuna(l,col){
   if(!col||!l.words.length)return null;
   const dist=(w,a)=>{
@@ -2467,14 +2527,15 @@ function analisarFatura(data,W,extra,manter){
     col=fatDetetarColunaPreco(L.slice(Math.max(0,primeira-12),primeira),W,extra);
     if(!col)col=fatDetetarColunaPreco(L,W,extra);
   }
-  FAT.col=col;
+  FAT.col=col;FAT.L=L;
+  const raw=document.getElementById('fat-raw');if(raw)raw.textContent=L.map(l=>l.text).join('\n');
 
   const encontrados=[],vistos=new Set();
   achados.forEach(a=>{
     const nums=fatNumeros(a.l.text,[a.tok]);
     const descs=[];(a.l.text.match(/(\d{1,2}(?:[.,]\d+)?)\s*%/g)||[]).forEach(x=>descs.push(parseFloat(x.replace(',','.'))));
     let preco=null,metodo='estimado';
-    const pc=fatPrecoPorColuna(a.l,col);
+    const pc=FAT.teach?fatPrecoPorTeach(a.l,FAT.teach):fatPrecoPorColuna(a.l,col);
     if(pc!=null){preco=pc;metodo='coluna';}
     else preco=fatEscolherPreco(nums,descs);
     const chips=[...new Set(nums.filter(n=>n.dec&&n.v>0).map(n=>n.v))].slice(0,5);
@@ -2490,7 +2551,7 @@ function analisarFatura(data,W,extra,manter){
       encontrados.push({cod:a.gtin.cod,prod:null,nome:a.gtin.cod,preco,chips,fora:true,metodo});
     }
   });
-  FAT.linhas=encontrados;
+  FAT.linhas=encontrados;FAT.linhasIdx=new Set(achados.map(a=>a.li));
 
   if(!manter){
     const fSel=fDet||FORN_ATIVO||null;
@@ -2514,7 +2575,7 @@ function renderFatura(){
   const nOk=L.filter(x=>!x.fora).length,nFora=L.length-nOk;
   document.getElementById('fat-sum').innerHTML=
     `✓ <b>${nOk}</b> artigo(s) da sua base encontrados`+(nFora?` · ${nFora} código(s) fora da base`:'')+
-    `<br>Preço: ${FAT.col?'coluna «'+String(FAT.col.texto).replace(/</g,'&lt;')+'» detetada <span style="opacity:.7">(cabeçalho lido: '+String(FAT.col.cabecalhos).replace(/</g,'&lt;')+')</span>':'coluna de preço NÃO detetada — escreva o cabeçalho (ex: PR.un) e toque em Reler'}`+
+    `<br>Preço: ${FAT.teach?'coluna marcada por si na foto ✓':FAT.col?'coluna «'+String(FAT.col.texto).replace(/</g,'&lt;')+'» detetada <span style="opacity:.7">(cabeçalho lido: '+String(FAT.col.cabecalhos).replace(/</g,'&lt;')+')</span>':'coluna de preço NÃO detetada — toque em «👆 Marcar a coluna do PREÇO»'}`+
     `<br>Fornecedor: ${FAT.fornDetetado?'detetado na fatura':'fornecedor ativo / escolha manual'} · Data: ${FAT.dataDetetada?'detetada na fatura':'hoje'}`;
   if(!L.length){
     box.innerHTML='<div class="fat-empty">Nenhum código da sua base foi reconhecido.<br>Tente outra foto: de frente, boa luz, sem sombras, só a tabela de artigos.</div>';
@@ -2535,6 +2596,53 @@ function renderFatura(){
     </div>`;
   }).join('');
   fatRefreshAnteriores();
+}
+
+// ── marcar a coluna do preço tocando na foto ──
+let FAT_ZOOM=1;
+function fatAbrirTap(){
+  if(!FAT.canvas||!FAT.L){toast('Tire primeiro a foto da fatura','err');return;}
+  const c=FAT.canvas,W=c.width,H=c.height;
+  const prods=new Set(FAT.linhas.filter(x=>!x.fora).map(x=>x.cod));
+  const stage=document.getElementById('fat-tap-stage');
+  let html='<img src="'+c.toDataURL('image/jpeg',0.82)+'" alt="">';
+  FAT.L.forEach((l,li)=>{
+    const linhaProd=FAT.linhasIdx&&FAT.linhasIdx.has(li);
+    l.words.forEach((w,wi)=>{
+      if(!fatEhNumero(w.t)||!/[.,]\d{1,4}$/.test(String(w.t).trim()))return;
+      html+=`<div class="fat-box ${linhaProd?'':'dim'}" style="left:${w.x0/W*100}%;top:${w.y0/H*100}%;width:${(w.x1-w.x0)/W*100}%;height:${(w.y1-w.y0)/H*100}%" onclick="fatTapPreco(${li},${wi})"></div>`;
+    });
+  });
+  stage.innerHTML=html;
+  FAT_ZOOM=1;stage.style.width='100%';
+  document.getElementById('fat-tap-bg').classList.add('open');
+}
+function fatFecharTap(){document.getElementById('fat-tap-bg').classList.remove('open');}
+function fatZoom(d){
+  FAT_ZOOM=Math.min(3.5,Math.max(1,FAT_ZOOM+d*0.75));
+  document.getElementById('fat-tap-stage').style.width=(FAT_ZOOM*100)+'%';
+}
+function fatTapPreco(li,wi){
+  const l=FAT.L[li],w=l.words[wi],W=FAT.W;
+  const nw=fatNumPalavras(l);
+  const pos=nw.indexOf(w);
+  FAT.teach={cx:(w.x0+w.x1)/2,tol:Math.max((w.x1-w.x0)*1.3,W*0.045),n:nw.length,rankR:pos>=0?nw.length-1-pos:0};
+  // aprende o cabeçalho dessa coluna (para reconhecer sozinho nas próximas faturas)
+  try{
+    const fid=document.getElementById('fat-forn').value;
+    let melhor=null;
+    FAT.L.forEach(x=>x.words.forEach(h=>{
+      if(h.y1>w.y0||fatEhNumero(h.t))return;
+      const t=fatNm(h.t);
+      if(!fatEhPreco(t)||t.length<2)return;
+      const dx=Math.abs((h.x0+h.x1)/2-FAT.teach.cx);
+      if(dx<=FAT.teach.tol*2.5&&(!melhor||dx<melhor.dx))melhor={dx,t:h.t};
+    }));
+    if(fid&&melhor)localStorage.setItem('PC_FAT_COL_'+fid,melhor.t);
+  }catch(e){}
+  fatFecharTap();
+  analisarFatura(FAT.data,FAT.W,FAT.extra,true);
+  toast('✓ Coluna do preço marcada · '+FAT.linhas.length+' artigo(s)','ok');
 }
 function fatReanalisar(){
   if(!FAT.data){toast('Tire primeiro a foto da fatura','err');return;}
