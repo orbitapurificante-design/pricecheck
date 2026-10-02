@@ -640,7 +640,6 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
 <div class="screen" id="m4">
   <div class="ftop"><div class="ftitle">Fornecedores</div><div class="fsub">Selecione o fornecedor ativo para registar preços</div></div>
   <button class="fadd" onclick="abrirFornModal()">+ Adicionar Fornecedor</button>
-  <button class="fadd sec" onclick="document.getElementById('f-logos').click()">🖼️ Carregar logos (ARCOL.jpg, ATL.jpg, NOVOCASH.jpg …)</button>
   <div class="flist" id="forn-list"></div>
 </div>
 
@@ -740,9 +739,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
       <button onclick="document.getElementById('f-fat-cam').click()">📸 Tirar foto</button>
       <button class="sec" onclick="document.getElementById('f-fat-gal').click()">🖼️ Galeria / PDF</button>
     </div>
-    <div id="fat-ia" style="margin:4px 0 8px"><div style="font-size:11px;color:var(--muted);margin-bottom:5px">🤖 Leitura por IA (muito mais fiável — fotos e PDF). Chave da API Anthropic, guardada só neste aparelho:</div>
-      <div style="display:flex;gap:6px"><input type="password" id="fat-key" placeholder="sk-ant-..." style="flex:1;min-width:0;background:var(--s2);border:1px solid var(--bd2);border-radius:8px;padding:9px;color:var(--text);font-size:12px"><button class="em-btn em-ok" style="flex:0 0 auto;padding:9px 12px;font-size:12px" onclick="fatGuardarKey()">Guardar</button></div></div>
-    <div class="fat-prog" id="fat-prog"><div class="fat-prog-txt" id="fat-prog-txt">A preparar…</div><div class="fat-prog-bar"><div class="fat-prog-fill" id="fat-prog-fill"></div></div></div>
+        <div class="fat-prog" id="fat-prog"><div class="fat-prog-txt" id="fat-prog-txt">A preparar…</div><div class="fat-prog-bar"><div class="fat-prog-fill" id="fat-prog-fill"></div></div></div>
     <div id="fat-result" style="display:none">
       <div class="fat-meta">
         <div><label>Fornecedor</label><select id="fat-forn"></select></div>
@@ -750,12 +747,6 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
       </div>
       <div class="fat-sum" id="fat-sum"></div>
       <button class="em-btn em-ok" style="width:100%;margin-bottom:10px" onclick="fatAbrirTap()">👆 Marcar a coluna do PREÇO na foto</button>
-      <div class="fat-meta" style="align-items:flex-end">
-        <div><label>Coluna do preço (cabeçalho)</label><input type="text" id="fat-col" placeholder="ex: PR.un, Preço Unit"></div>
-        <div style="flex:0 0 auto"><button class="em-btn em-ok" style="padding:9px 14px;font-size:12px" onclick="fatReanalisar()">🔄 Reler</button></div>
-      </div>
-      <button class="em-btn em-cancel" style="width:100%;margin-bottom:8px;font-size:11px;padding:8px" onclick="var e=document.getElementById('fat-raw');e.style.display=e.style.display==='block'?'none':'block'">📄 Ver texto lido pelo OCR</button>
-      <div class="fat-raw" id="fat-raw"></div>
       <div class="fat-list" id="fat-list"></div>
       <div class="em-btns">
         <button class="em-btn em-cancel" onclick="fatNova()">🔄 Outra foto</button>
@@ -2477,7 +2468,7 @@ function fatPrecoPorTeach(l,t){
   }
   if(!w)w=xn();
   if(!w)return null;
-  const v=fatValorNum(w.t);
+  const v=fatValorNum(w.t);FAT.lastRaw=w.t;
   return v>0?v:null;
 }
 function fatPrecoPorColuna(l,col){
@@ -2493,10 +2484,11 @@ function fatPrecoPorColuna(l,col){
     if(v==null||v<=0)return;
     const dP=Math.min(...col.col.map(a=>dist(w,a)));
     const dO=col.outros.length?Math.min(...col.outros.map(a=>dist(w,a))):1e9;
-    if(dP<dO)cands.push({v,dP,dec:/[.,]\d{2,4}$/.test(String(w.t))});
+    if(dP<dO)cands.push({raw:w.t,v,dP,dec:/[.,]\d{2,4}$/.test(String(w.t))});
   });
   if(!cands.length)return null;
   cands.sort((a,b)=>(b.dec-a.dec)||(a.dP-b.dP));
+  FAT.lastRaw=cands[0].raw;
   return cands[0].v;
 }
 
@@ -2537,15 +2529,15 @@ function analisarFatura(data,W,extra,manter){
     if(!col)col=fatDetetarColunaPreco(L,W,extra);
   }
   FAT.col=col;FAT.L=L;
-  const raw=document.getElementById('fat-raw');if(raw)raw.textContent=L.map(l=>l.text).join('\n');
+  
 
   const encontrados=[],vistos=new Set();
   achados.forEach(a=>{
     const nums=fatNumeros(a.l.text,[a.tok]);
     const descs=[];(a.l.text.match(/(\d{1,2}(?:[.,]\d+)?)\s*%/g)||[]).forEach(x=>descs.push(parseFloat(x.replace(',','.'))));
-    let preco=null,metodo='estimado';
+    let preco=null,metodo='estimado',raw=null;
     const pc=FAT.teach?fatPrecoPorTeach(a.l,FAT.teach):fatPrecoPorColuna(a.l,col);
-    if(pc!=null){preco=pc;metodo='coluna';}
+    if(pc!=null){preco=pc;metodo='coluna';raw=FAT.lastRaw;}
     else preco=fatEscolherPreco(nums,descs);
     const chips=[...new Set(nums.filter(n=>n.dec&&n.v>0).map(n=>n.v))].slice(0,5);
     if(a.prod){
@@ -2553,13 +2545,18 @@ function analisarFatura(data,W,extra,manter){
       if(vistos.has(cod))return;
       if(preco==null&&fatNorm(a.tok).length<6)return;
       vistos.add(cod);
-      encontrados.push({cod,prod:a.prod,nome:a.prod.nome,preco,chips,fora:false,metodo});
+      encontrados.push({cod,prod:a.prod,nome:a.prod.nome,preco,chips,fora:false,metodo,raw});
     }else{
       if(preco==null||vistos.has(a.gtin.cod))return;
       vistos.add(a.gtin.cod);
-      encontrados.push({cod:a.gtin.cod,prod:null,nome:a.gtin.cod,preco,chips,fora:true,metodo});
+      encontrados.push({cod:a.gtin.cod,prod:null,nome:a.gtin.cod,preco,chips,fora:true,metodo,raw});
     }
   });
+  (function(){ // o OCR por vezes perde o ponto decimal: 10351 → 10.351
+    let d=FAT.teach?FAT.teach.dec:0;
+    if(!d){const c={};encontrados.forEach(e=>{const m=e.raw&&String(e.raw).match(/[.,](\d{1,4})$/);if(m)c[m[1].length]=(c[m[1].length]||0)+1;});let b=0;Object.keys(c).forEach(k=>{if(c[k]>b){b=c[k];d=+k;}});}
+    if(d>=1)encontrados.forEach(e=>{const r=e.raw&&String(e.raw).replace(/[€*\s]/g,'');if(r&&/^\d{3,}$/.test(r))e.preco=parseInt(r,10)/Math.pow(10,d);});
+  })();
   FAT.linhas=encontrados;FAT.linhasIdx=new Set(achados.map(a=>a.li));
 
   if(!manter){
@@ -2580,12 +2577,8 @@ function analisarFatura(data,W,extra,manter){
 
 function renderFatura(){
   const L=FAT.linhas,box=document.getElementById('fat-list');
-  document.getElementById('fat-col').value=FAT.extra||'';
   const nOk=L.filter(x=>!x.fora).length,nFora=L.length-nOk;
-  document.getElementById('fat-sum').innerHTML=
-    `✓ <b>${nOk}</b> artigo(s) da sua base encontrados`+(nFora?` · ${nFora} código(s) fora da base`:'')+
-    `<br>Preço: ${FAT.ia?'lida por IA (preço unitário s/IVA) · '+FAT.iaTotal+' linhas na fatura':FAT.teach?'coluna marcada por si na foto ✓':FAT.col?'coluna «'+String(FAT.col.texto).replace(/</g,'&lt;')+'» detetada <span style="opacity:.7">(cabeçalho lido: '+String(FAT.col.cabecalhos).replace(/</g,'&lt;')+')</span>':'coluna de preço NÃO detetada — toque em «👆 Marcar a coluna do PREÇO»'}`+
-    `<br>Fornecedor: ${FAT.fornDetetado?'detetado na fatura':'fornecedor ativo / escolha manual'} · Data: ${FAT.dataDetetada?'detetada na fatura':'hoje'}`;
+  document.getElementById('fat-sum').innerHTML=`✓ <b>${nOk}</b> artigo(s) da sua base encontrados`+(nFora?` · ${nFora} fora da base`:'');
   if(!L.length){
     box.innerHTML='<div class="fat-empty">Nenhum código da sua base foi reconhecido.<br>Tente outra foto: de frente, boa luz, sem sombras, só a tabela de artigos.</div>';
     document.getElementById('fat-apply').style.display='none';
@@ -2635,7 +2628,7 @@ function fatTapPreco(li,wi){
   const l=FAT.L[li],w=l.words[wi],W=FAT.W;
   const nw=fatNumPalavras(l);
   const pos=nw.indexOf(w);
-  FAT.teach={cx:(w.x0+w.x1)/2,tol:Math.max((w.x1-w.x0)*1.3,W*0.045),n:nw.length,rankR:pos>=0?nw.length-1-pos:0};
+  FAT.teach={cx:(w.x0+w.x1)/2,tol:Math.max((w.x1-w.x0)*1.3,W*0.045),n:nw.length,rankR:pos>=0?nw.length-1-pos:0,dec:((String(w.t).match(/[.,](\d{1,4})$/)||[0,''])[1]).length};
   // aprende o cabeçalho dessa coluna (para reconhecer sozinho nas próximas faturas)
   try{
     const fid=document.getElementById('fat-forn').value;
@@ -2793,7 +2786,7 @@ async function fatPdfParaOcr(pdf){
 }
 function fatReanalisar(){
   if(!FAT.data){toast('Tire primeiro a foto da fatura','err');return;}
-  const nome=document.getElementById('fat-col').value.trim();
+  const nome='';
   const fid=document.getElementById('fat-forn').value;
   try{if(fid)localStorage.setItem('PC_FAT_COL_'+fid,nome);}catch(e){}   // lembra para este fornecedor
   try{
