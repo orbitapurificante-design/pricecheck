@@ -336,6 +336,45 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
 .fat-preco{width:84px;flex-shrink:0;background:rgba(201,168,76,.08);border:1.5px solid var(--a);border-radius:var(--r8);padding:8px 6px;color:var(--a);font-size:15px;font-weight:700;font-family:'JetBrains Mono',monospace;text-align:right;outline:none;}
 .fat-empty{text-align:center;color:var(--muted);font-size:13px;padding:22px 10px;}
 .fat-prev{width:100%;max-height:120px;object-fit:contain;border-radius:var(--r8);background:#000;margin-bottom:10px;display:none;}
+
+/* ── FORNECEDOR ATIVO: verde alface ── */
+.fitem.ativo{background:#bfe58a !important;border-color:#8fc74a !important;}
+.fitem.ativo .finome{color:#1d2b0e;}
+.fitem.ativo .fistats{color:#3f5a1c;}
+.fitem.ativo .fi-edit{background:rgba(255,255,255,.55);color:#2b3d12;border-color:rgba(0,0,0,.12);}
+.fitem.ativo .fi-ativo-b{background:#2f5d12;color:#fff;}
+.hforn.ativo{background:#bfe58a;border-color:#8fc74a;color:#1d2b0e;}
+.hforn.ativo .hforn-dot{background:#2f5d12;}
+.fava{overflow:hidden;position:relative;}
+.fava img{width:100%;height:100%;object-fit:contain;background:#fff;display:block;}
+.fi-lista{background:var(--a);color:#1a2340;border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;}
+.fadd.sec{margin-top:0;border-style:solid;border-color:var(--bd2);color:#475569;font-size:12px;padding:10px;}
+/* ── RELATÓRIO POR FORNECEDOR ── */
+#frep-modal-bg{z-index:8600;}
+.frep-card{max-height:94vh;display:flex;flex-direction:column;}
+.frep-head{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
+.frep-logo{width:54px;height:54px;border-radius:var(--r8);background:var(--s2);display:flex;align-items:center;justify-content:center;font-size:24px;overflow:hidden;flex-shrink:0;cursor:pointer;border:1px dashed var(--bd2);}
+.frep-logo img{width:100%;height:100%;object-fit:contain;background:#fff;}
+.frep-t{font-size:17px;font-weight:800;line-height:1.15;}
+.frep-s{font-size:11px;color:var(--muted);margin-top:2px;}
+.frep-search{width:100%;background:var(--s2);border:1px solid var(--bd2);border-radius:var(--r8);padding:10px 12px;color:var(--text);font-size:13px;font-family:'Inter',sans-serif;outline:none;margin-bottom:10px;}
+.frep-list{flex:1;overflow-y:auto;min-height:120px;margin-bottom:10px;}
+.frep-row{background:var(--s2);border:1px solid var(--bd);border-radius:var(--r12);margin-bottom:8px;overflow:hidden;}
+.frep-main{display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;}
+.frep-nome{flex:1;min-width:0;}
+.frep-nome b{display:block;font-size:13px;font-weight:600;line-height:1.25;}
+.frep-nome span{font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;}
+.frep-pr{text-align:right;flex-shrink:0;}
+.frep-pr b{display:block;font-size:15px;color:var(--a);font-family:'JetBrains Mono',monospace;}
+.frep-pr span{font-size:10px;color:var(--muted);}
+.frep-hist{background:var(--s1);padding:4px 10px 10px;border-top:1px solid var(--bd);}
+.frep-ent{display:flex;gap:6px;align-items:center;margin-top:8px;}
+.frep-ent input{background:var(--s2);border:1px solid var(--bd2);border-radius:8px;padding:8px 6px;color:var(--text);font-size:13px;min-width:0;font-family:'Inter',sans-serif;}
+.frep-ent input.p{width:78px;color:var(--a);font-weight:700;font-family:'JetBrains Mono',monospace;text-align:right;}
+.frep-ent input.d{flex:1;}
+.frep-b{border:none;border-radius:8px;padding:8px 10px;font-size:13px;cursor:pointer;flex-shrink:0;}
+.frep-b.ok{background:var(--a2);color:#fff;} .frep-b.x{background:rgba(239,68,68,.15);color:var(--danger);}
+.frep-delall{width:100%;padding:11px;border:1px solid rgba(239,68,68,.25);border-radius:var(--r8);background:rgba(239,68,68,.06);color:var(--danger);font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;margin-bottom:8px;}
 </style>
 </head>
 <body>
@@ -585,6 +624,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
 <div class="screen" id="m4">
   <div class="ftop"><div class="ftitle">Fornecedores</div><div class="fsub">Selecione o fornecedor ativo para registar preços</div></div>
   <button class="fadd" onclick="abrirFornModal()">+ Adicionar Fornecedor</button>
+  <button class="fadd sec" onclick="document.getElementById('f-logos').click()">🖼️ Carregar logos (ARCOL.jpg, ATL.jpg, NOVOCASH.jpg …)</button>
   <div class="flist" id="forn-list"></div>
 </div>
 
@@ -644,6 +684,22 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
   </div>
 </div>
 
+
+<input type="file" id="f-logos" multiple accept="image/*" style="display:none">
+<input type="file" id="f-logo-um" accept="image/*" style="display:none">
+<div class="modal-bg" id="frep-modal-bg">
+  <div class="modal-card frep-card">
+    <div class="mhandle"></div>
+    <div class="frep-head">
+      <div class="frep-logo" id="frep-logo" title="Toque para mudar o logo" onclick="document.getElementById('f-logo-um').click()">🏭</div>
+      <div style="flex:1;min-width:0"><div class="frep-t" id="frep-t"></div><div class="frep-s" id="frep-s"></div></div>
+    </div>
+    <input class="frep-search" id="frep-busca" placeholder="🔍 Pesquisar produto ou código..." oninput="renderFornRelatorio()">
+    <div class="frep-list" id="frep-list"></div>
+    <button class="frep-delall" onclick="frepApagarTodos()">🗑️ Apagar todos os registos deste fornecedor</button>
+    <button class="em-btn em-cancel" style="width:100%" onclick="fecharFornRelatorio()">Fechar</button>
+  </div>
+</div>
 
 <!-- FATURA OCR -->
 <input type="file" id="f-fat-cam" accept="image/*" capture="environment" style="display:none">
@@ -893,6 +949,12 @@ async function atualizarDoGitHub(silencioso){
     return false;
   }
   try{
+    if(gitSyncPendente&&GIT_CFG.proxy){
+      // há alterações locais (editar/apagar) por enviar: enviar primeiro, senão o merge traria de volta o que apagou
+      const ok=await enviarParaGitHub(true);
+      if(!silencioso)toast(ok?'✓ Alterações enviadas para o GitHub':'Alterações locais por enviar (sem ligação)',ok?'ok':'err');
+      return ok;
+    }
     const resp=await fetch(GIT_CFG.rawUrl+'?t='+Date.now());
     if(!resp.ok)throw new Error('Ficheiro ainda não existe no GitHub (envia primeiro uma vez)');
     const txt=await resp.text();
@@ -1487,10 +1549,11 @@ function renderFornecedores(){
     const np=Object.values(PRECOS_DB).filter(pf=>pf[f.id]?.length>0).length;
     const nr=Object.values(PRECOS_DB).reduce((a,pf)=>a+(pf[f.id]?.length||0),0);
     return`<div class="fitem${at?' ativo':''}" onclick="selecionarFornecedor(${f.id})">
-      <div class="fava">🏭</div>
+      <div class="fava" title="Ver lista deste fornecedor" onclick="event.stopPropagation();abrirFornRelatorio(${f.id})">${fornLogo(f.id)?`<img src="${fornLogo(f.id)}" alt="">`:'🏭'}</div>
       <div class="ficol"><div class="finome">${f.nome}</div><div class="fistats">${np} produto(s) · ${nr} registo(s)</div></div>
       <div class="fiacts">
         ${at?'<span class="fi-ativo-b">ATIVO</span>':''}
+        <button class="fi-lista" onclick="event.stopPropagation();abrirFornRelatorio(${f.id})">📋 Lista</button>
         <button class="fi-edit" onclick="event.stopPropagation();abrirFornModal(${f.id})">✏️ Editar</button>
       </div>
     </div>`;
@@ -2166,7 +2229,7 @@ async function processarFatura(file){
     const {data}=await worker.recognize(canvas);
     await worker.terminate();
     fatProg('A cruzar com a base de dados…',0.97);
-    analisarFatura(data.text||'');
+    analisarFatura(data,canvas.width);
   }catch(err){
     console.error(err);
     toast('Erro: '+(err.message||err),'err');
@@ -2180,14 +2243,24 @@ async function processarFatura(file){
 function fatNorm(s){return String(s||'').toUpperCase().replace(/[^A-Z0-9]/g,'');}
 function fatSemAcentos(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();}
 function fatIndexProdutos(){
-  const m=new Map();
+  const m=new Map(),m12=new Map();
   DADOS.forEach(p=>{
     [p.cod,p.ean,p.f].forEach(c=>{
       const k=fatNorm(c);
       if(k.length>=4&&!m.has(k))m.set(k,p);
-      if(/^\d+$/.test(k)){const z=k.replace(/^0+/,'');if(z.length>=4&&!m.has(z))m.set(z,p);}
+      if(/^\d+$/.test(k)){
+        const z=k.replace(/^0+/,'');if(z.length>=4&&!m.has(z))m.set(z,p);
+        // EAN-14 na fatura: ignora o 1.º dígito e compara os 12 seguintes com os 12 primeiros do Excel
+        if(k.length>=12&&k.length<=13){
+          const a12=k.slice(0,12);if(!m12.has(a12))m12.set(a12,p);
+        }
+        if(k.length===12){ // Excel pode ter perdido um zero à esquerda do EAN-13
+          const b12=('0'+k).slice(0,12);if(!m12.has(b12))m12.set(b12,p);
+        }
+      }
     });
   });
+  m.__12=m12;
   return m;
 }
 function gtinValido(s){ // EAN-8/12/13/14 com dígito de controlo
@@ -2263,54 +2336,123 @@ function fatPrecoAnterior(cod,fid){
   return h.length?parseFloat(h[h.length-1].preco):null;
 }
 
-function analisarFatura(texto){
-  const linhas=texto.split('\n').map(l=>l.trim()).filter(Boolean);
-  const idx=fatIndexProdutos();
-  const encontrados=[],vistos=new Set();
-  linhas.forEach(l=>{
-    const toks=l.split(/[^A-Za-z0-9]+/).filter(t=>t.length>=4);
-    let prod=null,tokUsado=null,gtinFora=null;
+
+// ── linhas do OCR com posição das palavras (para achar a coluna de preço) ──
+function fatLinhasOCR(data){
+  let ls=data.lines;
+  if(!ls||!ls.length){ls=[];(data.blocks||[]).forEach(b=>(b.paragraphs||[]).forEach(pp=>(pp.lines||[]).forEach(l=>ls.push(l))));}
+  if(ls&&ls.length){
+    return ls.map(l=>({
+      text:(l.text||'').trim(),
+      words:(l.words||[]).filter(w=>w.bbox).map(w=>({t:String(w.text||'').trim(),x0:w.bbox.x0,x1:w.bbox.x1,y0:w.bbox.y0,y1:w.bbox.y1}))
+    })).filter(l=>l.text);
+  }
+  return (data.text||'').split('\n').map(t=>({text:t.trim(),words:[]})).filter(l=>l.text);
+}
+function fatValorCelula(t,permitirInt){
+  const s=String(t).replace(/[€*]/g,'').trim();
+  if(/^\d{1,3}(\.\d{3})+,\d{2,4}$/.test(s))return parseFloat(s.replace(/\./g,'').replace(',','.'));
+  if(/^\d+[.,]\d{2,4}$/.test(s))return parseFloat(s.replace(',','.'));
+  if(permitirInt&&/^\d{1,4}$/.test(s))return parseFloat(s);
+  return null;
+}
+// procura o cabeçalho "Preço" / "Preço Unit." / "Preço Unit. s/IVA" (nunca c/IVA, PVP ou Total)
+function fatDetetarColunaPreco(zona,W){
+  const ws=[];zona.forEach(l=>l.words.forEach(w=>{if(w.t&&!/^[\d.,%€\-]+$/.test(w.t))ws.push(w);}));
+  const nm=w=>fatSemAcentos(w.t).replace(/[^a-z0-9\/.%]/g,'');
+  const cands=ws.filter(w=>/^(preco|prec\.?|pr\.?$|p\.?unit|pu$|punit|unit|vl\.?unit|vlr\.?unit|valor\.?unit)/.test(nm(w)));
+  let best=null;
+  cands.forEach(c=>{
+    const cx=(c.x0+c.x1)/2,tol=Math.max((c.x1-c.x0)*1.4,W*0.07);
+    const col=ws.filter(w=>Math.abs((w.x0+w.x1)/2-cx)<=tol);
+    const nms=col.map(nm);
+    let sc=1;
+    if(nms.some(t=>/^unit|^p\.?unit|^pu$/.test(t)))sc+=1;
+    if(nms.some(t=>/^(s\/?iva|siva|sem|s\/|liquido|liq\.?)$/.test(t)))sc+=3;
+    if(nms.some(t=>/^(c\/?iva|civa|c\/|com|pvp|total|desc\.?|%desc|valor|importancia|base)$/.test(t)))sc-=10;
+    if(!best||sc>best.sc){
+      best={sc,x0:Math.min(...col.map(w=>w.x0)),x1:Math.max(...col.map(w=>w.x1)),cx,texto:col.sort((a,b)=>a.x0-b.x0).map(w=>w.t).join(' ')};
+    }
+  });
+  return best&&best.sc>=1?best:null;
+}
+function fatPrecoPorColuna(l,col){
+  if(!col||!l.words.length)return null;
+  const tol=Math.max((col.x1-col.x0)*0.3,14),hc=(col.x0+col.x1)/2;
+  let best=null,bd=1e9;
+  l.words.forEach(w=>{
+    const v=fatValorCelula(w.t,true);
+    if(v==null||v<=0)return;
+    if(!(w.x1>=col.x0-tol&&w.x0<=col.x1+tol))return;
+    const d=Math.abs((w.x0+w.x1)/2-hc);
+    if(d<bd){bd=d;best=v;}
+  });
+  return best;
+}
+
+function analisarFatura(data,W){
+  const L=fatLinhasOCR(data);
+  const texto=L.map(l=>l.text).join('\n');
+  const linhas=L.map(l=>l.text);
+  const idx=fatIndexProdutos(),idx12=idx.__12;
+  const achados=[]; // 1.ª passagem: que linhas têm um artigo
+  L.forEach((l,li)=>{
+    const toks=l.text.split(/[^A-Za-z0-9]+/).filter(t=>t.length>=4);
+    let prod=null,tok=null,gtinFora=null;
     for(const t of toks){
       let k=fatNorm(t),alt=null;
       if(k.length>=8&&(k.match(/\d/g)||[]).length/k.length>=0.7)alt=k.replace(/O/g,'0').replace(/[IL]/g,'1');
       const cand=[k];if(alt&&alt!==k)cand.push(alt);
       for(const c of cand){
-        let p=idx.get(c)||(/^\d+$/.test(c)?idx.get(c.replace(/^0+/,'')):null);
-        if(p){prod=p;tokUsado=t;break;}
+        let pr=idx.get(c)||(/^\d+$/.test(c)?idx.get(c.replace(/^0+/,'')):null);
+        if(!pr&&/^\d{14}$/.test(c))pr=idx12.get(c.slice(1,13)); // EAN-14 → 12 dígitos do meio
+        if(pr){prod=pr;tok=t;break;}
         if(!gtinFora&&gtinValido(c))gtinFora={cod:c,tok:t};
       }
       if(prod)break;
     }
-    if(!prod&&!gtinFora)return;
-    const tok=prod?tokUsado:gtinFora.tok;
-    const nums=fatNumeros(l,[tok]);
-    const preco=fatEscolherPreco(nums);
+    if(prod||gtinFora)achados.push({li,l,prod,tok:prod?tok:gtinFora.tok,gtin:gtinFora});
+  });
+
+  // coluna de preço
+  let col=null;
+  if(achados.length&&L.some(l=>l.words.length)){
+    const primeira=achados[0].li;
+    col=fatDetetarColunaPreco(L.slice(Math.max(0,primeira-12),primeira),W);
+    if(!col)col=fatDetetarColunaPreco(L,W);
+  }
+  FAT.col=col;
+
+  const encontrados=[],vistos=new Set();
+  achados.forEach(a=>{
+    const nums=fatNumeros(a.l.text,[a.tok]);
+    let preco=null,metodo='estimado';
+    const pc=fatPrecoPorColuna(a.l,col);
+    if(pc!=null){preco=pc;metodo='coluna';}
+    else preco=fatEscolherPreco(nums);
     const chips=[...new Set(nums.filter(n=>n.dec&&n.v>0).map(n=>n.v))].slice(0,5);
-    if(prod){
-      const cod=getCod(prod);
+    if(a.prod){
+      const cod=getCod(a.prod);
       if(vistos.has(cod))return;
-      if(preco==null&&fatNorm(tok).length<6)return;
+      if(preco==null&&fatNorm(a.tok).length<6)return;
       vistos.add(cod);
-      encontrados.push({cod,prod,nome:prod.nome,preco,chips,fora:false});
+      encontrados.push({cod,prod:a.prod,nome:a.prod.nome,preco,chips,fora:false,metodo});
     }else{
-      if(preco==null)return;
-      if(vistos.has(gtinFora.cod))return;
-      vistos.add(gtinFora.cod);
-      encontrados.push({cod:gtinFora.cod,prod:null,nome:gtinFora.cod,preco,chips,fora:true});
+      if(preco==null||vistos.has(a.gtin.cod))return;
+      vistos.add(a.gtin.cod);
+      encontrados.push({cod:a.gtin.cod,prod:null,nome:a.gtin.cod,preco,chips,fora:true,metodo});
     }
   });
   FAT.linhas=encontrados;
 
-  // fornecedor + data automáticos
   const fDet=fatDetetarFornecedor(texto);
   const fSel=fDet||FORN_ATIVO||null;
   const sel=document.getElementById('fat-forn');
   sel.innerHTML=(fSel?'':'<option value="">— escolher —</option>')+FORNECEDORES.map(f=>`<option value="${f.id}" ${fSel&&String(fSel.id)===String(f.id)?'selected':''}>${f.nome.replace(/</g,'&lt;')}</option>`).join('');
   sel.onchange=fatRefreshAnteriores;
-  const dt=fatDetetarData(linhas)||new Date();
-  const iso=dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');
-  document.getElementById('fat-data').value=iso;
-  FAT.fornDetetado=!!fDet;FAT.dataDetetada=!!fatDetetarData(linhas);
+  const dd=fatDetetarData(linhas),dt=dd||new Date();
+  document.getElementById('fat-data').value=dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');
+  FAT.fornDetetado=!!fDet;FAT.dataDetetada=!!dd;
 
   document.getElementById('fat-pick').style.display='none';
   document.getElementById('fat-result').style.display='block';
@@ -2323,6 +2465,7 @@ function renderFatura(){
   const nOk=L.filter(x=>!x.fora).length,nFora=L.length-nOk;
   document.getElementById('fat-sum').innerHTML=
     `✓ <b>${nOk}</b> artigo(s) da sua base encontrados`+(nFora?` · ${nFora} código(s) fora da base`:'')+
+    `<br>Preço: ${FAT.col?'coluna «'+String(FAT.col.texto).replace(/</g,'&lt;')+'» detetada':'coluna de preço NÃO detetada — valores estimados, confirme'}`+
     `<br>Fornecedor: ${FAT.fornDetetado?'detetado na fatura':'fornecedor ativo / escolha manual'} · Data: ${FAT.dataDetetada?'detetada na fatura':'hoje'}`;
   if(!L.length){
     box.innerHTML='<div class="fat-empty">Nenhum código da sua base foi reconhecido.<br>Tente outra foto: de frente, boa luz, sem sombras, só a tabela de artigos.</div>';
@@ -2335,7 +2478,7 @@ function renderFatura(){
     return `<div class="fat-row ${x.fora?'off':''}" id="fat-row-${i}">
       <input type="checkbox" id="fat-chk-${i}" ${(!x.fora&&x.preco!=null)?'checked':''} onchange="document.getElementById('fat-row-${i}').classList.toggle('off',!this.checked)">
       <div class="fat-info">
-        <div class="fat-nome">${String(x.nome).replace(/</g,'&lt;')}${x.fora?'<span class="fat-tag">fora da base</span>':''}</div>
+        <div class="fat-nome">${String(x.nome).replace(/</g,'&lt;')}${x.fora?'<span class="fat-tag">fora da base</span>':''}${(!x.fora&&x.metodo==='estimado')?'<span class="fat-tag">estimado</span>':''}</div>
         <div class="fat-cod">${x.cod}</div>${chips}
         <div class="fat-ant" id="fat-ant-${i}"></div>
       </div>
@@ -2386,6 +2529,154 @@ function fatAplicar(){
   toast('✓ '+n+' preço(s) atualizados — '+(f?f.nome:''),'ok');
 }
 
+
+// ══ LOGOS DOS FORNECEDORES ══
+function fornLogo(id){return IMGS.get('logo:'+id)||'';}
+function logoBase(s){return fatSemAcentos(s).replace(/\.[a-z0-9]{2,4}$/,'').replace(/[^a-z0-9]/g,'');}
+function fornSigla(nome){
+  const ign=new Set(['de','da','do','dos','das','e','lda','sa','unipessoal']);
+  return fatSemAcentos(nome).split(/[^a-z0-9]+/).filter(w=>w&&!ign.has(w)).map(w=>w[0]).join('');
+}
+function fornPorFicheiro(nomeFicheiro){
+  const b=logoBase(nomeFicheiro.replace(/\.[^.]+$/,''));
+  if(!b)return null;
+  const info=FORNECEDORES.map(f=>({f,n:logoBase(f.nome),sg:fornSigla(f.nome)}));
+  let r=info.find(x=>x.n===b);if(r)return r.f;
+  r=info.find(x=>x.sg.length>=2&&x.sg===b);if(r)return r.f;
+  if(b.length>=3){
+    const c=info.filter(x=>x.n.startsWith(b)||(x.n.length>=3&&b.startsWith(x.n))).sort((x,y)=>x.n.length-y.n.length);
+    if(c.length)return c[0].f;
+    const c2=info.filter(x=>x.n.includes(b)).sort((x,y)=>x.n.length-y.n.length);
+    if(c2.length)return c2[0].f;
+  }
+  return null;
+}
+function redimensionarLogo(file){
+  return new Promise((res,rej)=>{
+    const url=URL.createObjectURL(file),img=new Image();
+    img.onload=()=>{
+      const M=256,sc=Math.min(1,M/Math.max(img.width,img.height));
+      const c=document.createElement('canvas');c.width=Math.round(img.width*sc);c.height=Math.round(img.height*sc);
+      c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+      URL.revokeObjectURL(url);
+      res(/png|gif|webp|svg/i.test(file.type)?c.toDataURL('image/png'):c.toDataURL('image/jpeg',0.88));
+    };
+    img.onerror=()=>{URL.revokeObjectURL(url);rej(new Error('imagem inválida'));};
+    img.src=url;
+  });
+}
+async function guardarLogo(id,file){
+  const d=await redimensionarLogo(file);
+  IMGS.set('logo:'+id,d);
+  try{await salvarImgDB('logo:'+id,d);}catch(e){}
+}
+document.getElementById('f-logos').onchange=async function(e){
+  const files=Array.from(e.target.files);e.target.value='';
+  if(!files.length)return;
+  let ok=0;const falhou=[];
+  for(const f of files){
+    const forn=fornPorFicheiro(f.name);
+    if(!forn){falhou.push(f.name);continue;}
+    try{await guardarLogo(forn.id,f);ok++;}catch(err){falhou.push(f.name);}
+  }
+  renderFornecedores();
+  toast(falhou.length?('✓ '+ok+' logo(s) · sem fornecedor para: '+falhou.join(', ')):'✓ '+ok+' logo(s) carregado(s)',falhou.length?'err':'ok');
+};
+document.getElementById('f-logo-um').onchange=async function(e){
+  const f=e.target.files[0];e.target.value='';
+  if(!f||FREP.id==null)return;
+  try{await guardarLogo(FREP.id,f);toast('✓ Logo atualizado','ok');}catch(err){toast('Imagem inválida','err');}
+  renderFornecedores();renderFornRelatorio();
+};
+
+// ══ RELATÓRIO / LISTA POR FORNECEDOR ══
+let FREP={id:null,rows:[],open:new Set()};
+function dataParaISO(d){const m=String(d||'').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);return m?m[3]+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0'):'';}
+function abrirFornRelatorio(id){
+  FREP={id,rows:[],open:new Set()};
+  document.getElementById('frep-busca').value='';
+  document.getElementById('frep-modal-bg').classList.add('open');
+  renderFornRelatorio();
+}
+function fecharFornRelatorio(){document.getElementById('frep-modal-bg').classList.remove('open');FREP.id=null;}
+function renderFornRelatorio(){
+  if(FREP.id==null)return;
+  const f=FORNECEDORES.find(x=>String(x.id)===String(FREP.id));
+  const fid=FREP.id;
+  document.getElementById('frep-t').textContent=f?f.nome:'Fornecedor';
+  const lg=fornLogo(fid);
+  document.getElementById('frep-logo').innerHTML=lg?`<img src="${lg}" alt="">`:'🏭';
+  const prodMap=new Map();DADOS.forEach(p=>{const c=getCod(p);if(!prodMap.has(c))prodMap.set(c,p);});
+  const busca=(document.getElementById('frep-busca').value||'').toLowerCase().trim();
+  const rows=[];
+  Object.keys(PRECOS_DB).forEach(cod=>{
+    const h=PRECOS_DB[cod][fid];if(!h||!h.length)return;
+    const p=prodMap.get(cod);
+    const nome=p?p.nome:(h[h.length-1].nome||cod);
+    rows.push({cod,nome,h});
+  });
+  rows.sort((a,b)=>a.nome.localeCompare(b.nome,'pt'));
+  const nReg=rows.reduce((a,r)=>a+r.h.length,0);
+  document.getElementById('frep-s').textContent=rows.length+' produto(s) · '+nReg+' registo(s)';
+  FREP.rows=rows;
+  const box=document.getElementById('frep-list');
+  const vis=rows.map((r,i)=>({r,i})).filter(({r})=>!busca||r.nome.toLowerCase().includes(busca)||r.cod.toLowerCase().includes(busca));
+  if(!vis.length){box.innerHTML='<div class="fat-empty">'+(rows.length?'Sem resultados':'Sem registos deste fornecedor')+'</div>';return;}
+  box.innerHTML=vis.map(({r,i})=>{
+    const ul=r.h[r.h.length-1],aberto=FREP.open.has(r.cod);
+    let hist='';
+    if(aberto){
+      hist='<div class="frep-hist">'+r.h.map((e,k)=>({e,k})).reverse().map(({e,k})=>
+        `<div class="frep-ent">
+          <input class="p" id="frep-p-${i}-${k}" type="number" step="0.001" inputmode="decimal" value="${parseFloat(e.preco)}">
+          <input class="d" id="frep-d-${i}-${k}" type="date" value="${dataParaISO(e.data)}">
+          <button class="frep-b ok" title="Guardar" onclick="frepGuardar(${i},${k})">✓</button>
+          <button class="frep-b x" title="Eliminar" onclick="frepApagar(${i},${k})">🗑️</button>
+        </div>`).join('')+
+        (r.h.length>1?`<button class="frep-b x" style="margin-top:10px;width:100%;font-size:11px" onclick="frepApagarProduto(${i})">Eliminar este produto (${r.h.length} registos)</button>`:'')+'</div>';
+    }
+    return `<div class="frep-row"><div class="frep-main" onclick="frepToggle(${i})">
+      <div class="frep-nome"><b>${String(r.nome).replace(/</g,'&lt;')}</b><span>${r.cod} · ${r.h.length} reg.</span></div>
+      <div class="frep-pr"><b>${parseFloat(ul.preco).toFixed(2)}€</b><span>${(ul.data||'').split(' ')[0]}</span></div>
+      <span style="color:var(--muted);font-size:12px">${aberto?'▴':'▾'}</span></div>${hist}</div>`;
+  }).join('');
+}
+function frepToggle(i){const r=FREP.rows[i];if(!r)return;FREP.open.has(r.cod)?FREP.open.delete(r.cod):FREP.open.add(r.cod);renderFornRelatorio();}
+function frepGuardar(i,k){
+  const r=FREP.rows[i];if(!r)return;
+  const e=PRECOS_DB[r.cod]?.[FREP.id]?.[k];if(!e)return;
+  const preco=parseFloat(document.getElementById(`frep-p-${i}-${k}`).value);
+  if(isNaN(preco)||preco<0){toast('Preço inválido','err');return;}
+  const dv=document.getElementById(`frep-d-${i}-${k}`).value;
+  e.preco=preco;
+  if(dv){const[y,m,d]=dv.split('-');const hora=((e.data||'').split(' ')[1])||'00:00';e.data=d+'/'+m+'/'+y+' '+hora;}
+  salvarPrecos();atualizarStats();renderFornRelatorio();renderFornecedores();toast('✓ Registo atualizado','ok');
+}
+function frepLimpar(cod){
+  const fid=FREP.id;
+  if(PRECOS_DB[cod]){
+    if(PRECOS_DB[cod][fid]&&!PRECOS_DB[cod][fid].length)delete PRECOS_DB[cod][fid];
+    if(!Object.keys(PRECOS_DB[cod]).length)delete PRECOS_DB[cod];
+  }
+}
+function frepFim(msg){salvarPrecos();atualizarStats();renderFornRelatorio();renderFornecedores();toast(msg,'ok');}
+function frepApagar(i,k){
+  const r=FREP.rows[i];if(!r||!confirm('Eliminar este registo?'))return;
+  PRECOS_DB[r.cod][FREP.id].splice(k,1);frepLimpar(r.cod);frepFim('Registo eliminado');
+}
+function frepApagarProduto(i){
+  const r=FREP.rows[i];if(!r||!confirm('Eliminar todos os registos de "'+r.nome+'" deste fornecedor?'))return;
+  delete PRECOS_DB[r.cod][FREP.id];frepLimpar(r.cod);frepFim('Produto eliminado');
+}
+function frepApagarTodos(){
+  const f=FORNECEDORES.find(x=>String(x.id)===String(FREP.id));
+  const n=FREP.rows.reduce((a,r)=>a+r.h.length,0);
+  if(!n){toast('Sem registos','err');return;}
+  if(!confirm('Eliminar TODOS os '+n+' registos de '+(f?f.nome:'este fornecedor')+'?\nNão dá para desfazer.'))return;
+  Object.keys(PRECOS_DB).forEach(cod=>{if(PRECOS_DB[cod][FREP.id]){delete PRECOS_DB[cod][FREP.id];frepLimpar(cod);}});
+  frepFim('Registos eliminados');
+}
+
 // ══ INIT ══
 (async()=>{
   await abrirImgDB();
@@ -2396,7 +2687,7 @@ function fatAplicar(){
   if(GIT_CFG.produtosRawUrl)atualizarProdutosDoGitHub(true);
   setTimeout(abrirScanner,400);
 })();
-['fat-modal-bg','pmodal-bg','nmodal-bg','hmodal-bg','fmodal-bg','em-modal-bg','wa-modal-bg','git-modal-bg'].forEach(id=>{
+['frep-modal-bg','fat-modal-bg','pmodal-bg','nmodal-bg','hmodal-bg','fmodal-bg','em-modal-bg','wa-modal-bg','git-modal-bg'].forEach(id=>{
   document.getElementById(id).addEventListener('click',function(e){
     if(e.target===this){this.classList.remove('open');if(id==='fmodal-bg')fecharFornModal();}
   });
