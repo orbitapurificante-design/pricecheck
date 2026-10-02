@@ -427,6 +427,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
     <button class="dbtn dbtn-p" onclick="document.getElementById('f-excel').click();fecharTudo()">📊 Carregar Excel de Produtos</button>
     <button class="dbtn dbtn-s" onclick="atualizarProdutosDoGitHub();fecharTudo()">⬇️ Atualizar Produtos do GitHub</button>
     <button class="dbtn dbtn-s" onclick="document.getElementById('f-fotos').click();fecharTudo()">🖼️ Carregar Fotos dos Produtos</button>
+    <button class="dbtn dbtn-s" onclick="document.getElementById('f-fotos-json').click();fecharTudo()">📥 Importar cópia das fotos (JSON)</button>
     <div class="dsep">GitHub (automático)</div>
     <button class="dbtn dbtn-p" onclick="enviarParaGitHub();fecharTudo()">⬆️ Enviar preços para GitHub</button>
     <button class="dbtn dbtn-s" onclick="atualizarDoGitHub();fecharTudo()">⬇️ Atualizar preços do GitHub</button>
@@ -443,6 +444,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
   </div>
   <input type="file" id="f-excel" accept=".xlsx,.xls,.csv" style="display:none">
   <input type="file" id="f-fotos" multiple accept="image/*" style="display:none">
+  <input type="file" id="f-fotos-json" multiple accept=".json,application/json" style="display:none">
   <input type="file" id="f-import" accept=".json" style="display:none">
 </div>
 
@@ -2984,6 +2986,64 @@ function frepApagarTodos(){
   Object.keys(PRECOS_DB).forEach(cod=>{if(PRECOS_DB[cod][FREP.id]){delete PRECOS_DB[cod][FREP.id];frepLimpar(cod);}});
   frepFim('Registos eliminados');
 }
+
+
+// ══ IMPORTAR CÓPIA DAS FOTOS (vários ficheiros JSON de uma vez) ══
+function fotosDeJSON(raiz){
+  const out=[];
+  const eurl=v=>typeof v==='string'&&(v.startsWith('data:image')||(v.length>400&&/^[A-Za-z0-9+/=\s]{200}/.test(v)));
+  const norm=v=>v.startsWith('data:')?v:'data:image/jpeg;base64,'+v.replace(/\s/g,'');
+  const CH_NOME=['nome','name','key','file','filename','ficheiro','f','cod','codigo','ean','id'];
+  const nomeDe=o=>{for(const k of CH_NOME){const v=o[k];if(v!=null&&typeof v!=='object'&&!eurl(v))return String(v);}return null;};
+  const walk=(x,chave)=>{
+    if(eurl(x)){out.push([chave,norm(x)]);return;}
+    if(Array.isArray(x)){
+      x.forEach((it,i)=>{
+        if(Array.isArray(it)&&it.length>=2&&typeof it[0]==='string'&&eurl(it[1]))out.push([it[0],norm(it[1])]);
+        else walk(it,chave+'_'+i);
+      });return;
+    }
+    if(x&&typeof x==='object'){
+      const ks=Object.keys(x),uk=ks.filter(k=>eurl(x[k]));
+      if(uk.length>1){uk.forEach(k=>out.push([k,norm(x[k])]));return;}          // mapa nome → imagem
+      if(uk.length===1){out.push([nomeDe(x)||(/^(data|img|image|imagem|foto|src|url|base64|dataurl|b64)$/i.test(uk[0])?chave:uk[0]),norm(x[uk[0]])]);return;}
+      ks.forEach(k=>walk(x[k],k));
+    }
+  };
+  walk(raiz,'img');
+  return out;
+}
+async function salvarImgLote(pares){
+  if(!imgDB)await abrirImgDB();
+  return new Promise((res,rej)=>{
+    const tx=imgDB.transaction(IMG_STORE,'readwrite'),st=tx.objectStore(IMG_STORE);
+    pares.forEach(([k,v])=>st.put(v,k));
+    tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error);
+  });
+}
+document.getElementById('f-fotos-json').onchange=async function(e){
+  const files=Array.from(e.target.files);e.target.value='';
+  if(!files.length)return;
+  let total=0,vazios=[];
+  for(let i=0;i<files.length;i++){
+    toast('A importar '+(i+1)+'/'+files.length+' · '+files[i].name+' …','ok');
+    try{
+      const lista=fotosDeJSON(JSON.parse(await files[i].text()));
+      if(!lista.length){vazios.push(files[i].name);continue;}
+      const pares=[];
+      lista.forEach(([nome,url])=>{
+        const base=String(nome).split(/[\\/]/).pop().toLowerCase(),semExt=base.replace(/\.[^.]+$/,'');
+        pares.push([base,url]);if(semExt!==base)pares.push([semExt,url]);
+      });
+      pares.forEach(([k,v])=>IMGS.set(k,v));
+      await salvarImgLote(pares);
+      total+=lista.length;
+    }catch(err){console.error(err);vazios.push(files[i].name);}
+    await new Promise(r=>setTimeout(r,30));
+  }
+  if(m2Ativo())renderProdutos();
+  toast(total?('✓ '+total+' fotos importadas'+(vazios.length?' · sem fotos reconhecidas: '+vazios.join(', '):'')):'Nenhuma foto reconhecida nos ficheiros',total?'ok':'err');
+};
 
 // ══ INIT ══
 (async()=>{
