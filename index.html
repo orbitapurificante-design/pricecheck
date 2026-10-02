@@ -2750,7 +2750,7 @@ async function fatLerPdfLocal(file){
     });
     off+=vp.height+40;
   }
-  if(words.length<15){toast('Este PDF é uma imagem (sem texto). Use uma foto/scan ou a leitura por IA.','err');fatNova();return;}
+  if(words.length<15){await fatPdfParaOcr(pdf);return;}   // PDF digitalizado: renderiza em alta resolução e faz OCR
   // agrupar palavras em linhas
   const hs=words.map(w=>w.y1-w.y0).sort((a,b)=>a-b),tol=hs[Math.floor(hs.length/2)]*0.6;
   words.sort((a,b)=>(a.y0+a.y1)-(b.y0+b.y1));
@@ -2763,6 +2763,33 @@ async function fatLerPdfLocal(file){
     return {text:L.ws.map(w=>w.t).join(' '),words:L.ws.map(w=>({text:w.t,bbox:{x0:w.x0,x1:w.x1,y0:w.y0,y1:w.y1}}))};});
   FAT.canvas=null;FAT.teach=null;
   analisarFatura({lines},W);
+}
+
+// PDF digitalizado (imagem): renderiza as páginas em alta resolução e lê com OCR local
+async function fatPdfParaOcr(pdf){
+  const nPag=Math.min(pdf.numPages,5),TW=2200;
+  const pgs=[];let H=0;
+  for(let n=1;n<=nPag;n++){
+    fatProg('A preparar página '+n+'/'+nPag+'…',0.3+0.2*n/nPag);
+    const pg=await pdf.getPage(n),v0=pg.getViewport({scale:1}),vp=pg.getViewport({scale:Math.min(4,TW/v0.width)});
+    const c=document.createElement('canvas');c.width=Math.round(vp.width);c.height=Math.round(vp.height);
+    const cx=c.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,c.width,c.height);
+    await pg.render({canvasContext:cx,viewport:vp}).promise;
+    pgs.push(c);H+=c.height;
+  }
+  const canvas=document.createElement('canvas');canvas.width=TW;canvas.height=H;
+  const x=canvas.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,TW,H);
+  let y=0;pgs.forEach(c=>{x.drawImage(c,0,y);y+=c.height;});
+  FAT.canvas=canvas;FAT.teach=null;
+  fatProg('A carregar leitor de texto…',0.5);
+  await carregarTesseract();
+  const worker=await Tesseract.createWorker('eng',1,{logger:m=>{
+    if(m.status==='recognizing text')fatProg('A ler o PDF… '+Math.round(m.progress*100)+'%',0.55+m.progress*0.4);}});
+  await worker.setParameters({tessedit_pageseg_mode:'6',preserve_interword_spaces:'1'});
+  const {data}=await worker.recognize(canvas);
+  await worker.terminate();
+  fatProg('A cruzar com a base de dados…',0.97);
+  analisarFatura(data,canvas.width);
 }
 function fatReanalisar(){
   if(!FAT.data){toast('Tire primeiro a foto da fatura','err');return;}
