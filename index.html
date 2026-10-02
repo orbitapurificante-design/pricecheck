@@ -2253,7 +2253,7 @@ async function processarFatura(file){
     const KEY=(localStorage.getItem('PC_AI_KEY')||'').trim();
     const ePdf=/pdf/i.test(file.type)||/\.pdf$/i.test(file.name);
     if(KEY||ePdf){
-      if(!KEY){toast('Para ler PDF precisa da chave da IA (campo por baixo dos botões)','err');fatNova();FAT.busy=false;return;}
+      if(!KEY){await fatLerPdfLocal(file);FAT.busy=false;document.getElementById('fat-prog').style.display='none';return;}
       await fatLerIA(file,KEY,ePdf);FAT.busy=false;document.getElementById('fat-prog').style.display='none';return;
     }
     fatProg('A preparar imagem…',0.03);
@@ -2715,6 +2715,54 @@ function fatMostrarIA(d){
   document.getElementById('fat-result').style.display='block';
   document.getElementById('fat-sub').textContent='Confirme e atualize';
   renderFatura();
+}
+
+// ══ PDF: texto exato (sem OCR, sem chave) ══
+let _pdfjsLoading=null;
+function carregarPdfJs(){
+  if(window.pdfjsLib)return Promise.resolve();
+  if(_pdfjsLoading)return _pdfjsLoading;
+  const base='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/';
+  _pdfjsLoading=new Promise((res,rej)=>{
+    const sc=document.createElement('script');sc.src=base+'pdf.min.js';
+    sc.onload=()=>{window.pdfjsLib.GlobalWorkerOptions.workerSrc=base+'pdf.worker.min.js';res();};
+    sc.onerror=()=>{_pdfjsLoading=null;rej(new Error('Precisa de internet para abrir o PDF'));};
+    document.head.appendChild(sc);
+  });
+  return _pdfjsLoading;
+}
+async function fatLerPdfLocal(file){
+  fatProg('A abrir o PDF…',0.2);
+  await carregarPdfJs();
+  const pdf=await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise;
+  const words=[];let W=0,off=0;
+  for(let n=1;n<=pdf.numPages;n++){
+    fatProg('A ler página '+n+'/'+pdf.numPages+'…',0.3+0.6*n/pdf.numPages);
+    const pg=await pdf.getPage(n),vp=pg.getViewport({scale:1}),tc=await pg.getTextContent();
+    W=Math.max(W,vp.width);
+    tc.items.forEach(it=>{
+      const str=it.str||'';if(!str.trim())return;
+      const x=it.transform[4],y=off+vp.height-it.transform[5],h=Math.max(it.height||Math.abs(it.transform[3])||8,6),len=str.length;
+      const re=/\S+/g;let m;
+      while((m=re.exec(str))){
+        words.push({t:m[0],x0:x+it.width*m.index/len,x1:x+it.width*(m.index+m[0].length)/len,y0:y-h,y1:y});
+      }
+    });
+    off+=vp.height+40;
+  }
+  if(words.length<15){toast('Este PDF é uma imagem (sem texto). Use uma foto/scan ou a leitura por IA.','err');fatNova();return;}
+  // agrupar palavras em linhas
+  const hs=words.map(w=>w.y1-w.y0).sort((a,b)=>a-b),tol=hs[Math.floor(hs.length/2)]*0.6;
+  words.sort((a,b)=>(a.y0+a.y1)-(b.y0+b.y1));
+  const linhas=[];
+  words.forEach(w=>{
+    const cy=(w.y0+w.y1)/2,L=linhas[linhas.length-1];
+    if(L&&Math.abs(cy-L.cy)<=tol){L.ws.push(w);L.cy=(L.cy*(L.ws.length-1)+cy)/L.ws.length;}else linhas.push({cy,ws:[w]});
+  });
+  const lines=linhas.map(L=>{L.ws.sort((a,b)=>a.x0-b.x0);
+    return {text:L.ws.map(w=>w.t).join(' '),words:L.ws.map(w=>({text:w.t,bbox:{x0:w.x0,x1:w.x1,y0:w.y0,y1:w.y1}}))};});
+  FAT.canvas=null;FAT.teach=null;
+  analisarFatura({lines},W);
 }
 function fatReanalisar(){
   if(!FAT.data){toast('Tire primeiro a foto da fatura','err');return;}
