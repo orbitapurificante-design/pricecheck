@@ -1204,7 +1204,22 @@ function getImg(p){
   return'';
 }
 
-function getCod(p){return p.cod||p.ean||p.f||String(p.id);}
+function codValido(c){c=String(c==null?'':c).trim();return c.length>1&&!/^(x+|0+|-+|_+|\.+|n\/?a|s\/?c)$/i.test(c);}
+function getCod(p){return [p.cod,p.ean,p.f].map(c=>String(c==null?'':c).trim()).find(codValido)||String(p.id);}
+// limpeza: remove registos guardados sob códigos inválidos (ex.: "X" misturava produtos) e duplicados exatos
+function limparPrecosInvalidos(){
+  let inv=0,dup=0;
+  try{localStorage.setItem('PC_PREC_BKP',localStorage.getItem('PC_PREC')||'{}');}catch(e){}
+  Object.keys(PRECOS_DB).forEach(k=>{
+    if(!codValido(k)){Object.values(PRECOS_DB[k]).forEach(h=>inv+=(h||[]).length);delete PRECOS_DB[k];return;}
+    Object.keys(PRECOS_DB[k]).forEach(fid=>{
+      const vistos=new Set(),out=[];
+      (PRECOS_DB[k][fid]||[]).forEach(e=>{const ch=parseFloat(e.preco)+'|'+e.data;if(vistos.has(ch)){dup++;return;}vistos.add(ch);out.push(e);});
+      PRECOS_DB[k][fid]=out;
+    });
+  });
+  if(inv||dup){salvarPrecos();setTimeout(()=>toast('🧹 Limpeza: '+inv+' registo(s) de código inválido e '+dup+' duplicado(s) removidos','ok'),1200);}
+}
 let _fpCache={ref:null,n:-1,idx:null};
 function idxProdutos(){
   if(_fpCache.ref!==DADOS||_fpCache.n!==DADOS.length)_fpCache={ref:DADOS,n:DADOS.length,idx:fatIndexProdutos()};
@@ -3106,6 +3121,7 @@ function fatRefreshAnteriores(){
   });
 }
 function fatAplicar(){
+  if(FAT._aplicando)return;FAT._aplicando=true;setTimeout(()=>{FAT._aplicando=false;},1500);
   const fid=document.getElementById('fat-forn').value;
   if(!fid){toast('Escolha o fornecedor','err');return;}
   const dv=document.getElementById('fat-data').value;
@@ -3121,12 +3137,14 @@ function fatAplicar(){
     if(isNaN(preco)||preco<0)return;
     if(!PRECOS_DB[x.cod])PRECOS_DB[x.cod]={};
     if(!PRECOS_DB[x.cod][fidKey])PRECOS_DB[x.cod][fidKey]=[];
+    const _h=PRECOS_DB[x.cod][fidKey],_u=_h[_h.length-1];
+    if(_u&&parseFloat(_u.preco)===preco&&String(_u.data).split(' ')[0]===data.split(' ')[0])return;   // já registado hoje com este preço
     const entrada={preco,data};
     if(x.prod)entrada.prodId=x.prod.id;else entrada.nome=x.nome;
     PRECOS_DB[x.cod][fidKey].push(entrada);
     n++;
   });
-  if(!n){toast('Nada selecionado','err');return;}
+  if(!n){toast('Nada novo para registar (preços já guardados hoje)','err');return;}
   salvarPrecos();atualizarStats();fecharFatura();
   const f=FORNECEDORES.find(x=>String(x.id)===String(fid));
   toast('✓ '+n+' preço(s) atualizados — '+(f?f.nome:''),'ok');
@@ -3452,7 +3470,7 @@ window.addEventListener('beforeunload',function(e){if(_sairOk)return;e.preventDe
 let ENCP={list:[],lim:100};
 function encProdItem(p){
   if(!FORN_ATIVO)return null;
-  const cods=[p.cod,p.ean,p.f].filter(Boolean);
+  const cods=[p.cod,p.ean,p.f].filter(codValido);
   return (ENCOMENDAS[FORN_ATIVO.id]||[]).find(x=>cods.includes(x.cod))||null;
 }
 function encProdAbrir(){
@@ -3510,7 +3528,7 @@ function encProdAlt(i,d){
 (async()=>{
   await abrirImgDB();
   setTimeout(carregarImgsBackground,300);
-  carregar();carregarEncomendas();atualizarHeaderForn();atualizarStats();
+  carregar();limparPrecosInvalidos();carregarEncomendas();atualizarHeaderForn();atualizarStats();
   carregarConfigGit();atualizarGitStatus();
   if(GIT_CFG.rawUrl)atualizarDoGitHub(true);
   if(GIT_CFG.produtosRawUrl)atualizarProdutosDoGitHub(true);
