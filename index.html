@@ -405,7 +405,20 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
 /* sem seleção de texto / dicionário ao tocar depressa nas famílias e produtos */
 .fam-h,.fam-h *,.prow,.prow *,.fitem,.fitem *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
 /* preço: vinho tinto */
-.prow .ppreco-v{color:#722f37;font-weight:800;}
+.prow .ppreco-v{color:#a4122f;font-weight:800;}
+
+#fat-crop-bg{position:fixed;inset:0;z-index:9500;background:#0b1020;display:none;flex-direction:column;}
+#fat-crop-bg.open{display:flex;}
+.fat-crop-top{padding:12px 14px;background:var(--s1);font-size:13px;font-weight:700;line-height:1.3;}
+.fat-crop-top small{display:block;font-weight:500;color:var(--muted);font-size:11px;margin-top:2px;}
+.fat-crop-wrap{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:8px;}
+#fat-crop-stage{position:relative;display:inline-block;touch-action:none;line-height:0;}
+#fat-crop-stage img{max-width:100%;max-height:calc(100vh - 150px);max-height:calc(100dvh - 150px);display:block;-webkit-user-select:none;user-select:none;pointer-events:none;}
+#fat-crop-sel{position:absolute;display:none;border:2px solid var(--a);background:rgba(201,168,76,.18);box-shadow:0 0 0 9999px rgba(0,0,0,.55);pointer-events:none;}
+.fat-crop-btns{display:flex;gap:8px;padding:10px 12px;background:var(--s1);}
+.fat-crop-btns button{flex:1;padding:12px 6px;border:none;border-radius:var(--r8);font-weight:700;font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;background:var(--s2);color:var(--text);}
+.fat-crop-btns button.ok{background:var(--a);color:#1a2340;}
+.fat-x{width:30px;height:30px;flex-shrink:0;border:none;border-radius:8px;background:rgba(239,68,68,.15);color:var(--danger);font-size:14px;cursor:pointer;align-self:center;}
 </style>
 </head>
 <body>
@@ -730,6 +743,13 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
     <button class="frep-delall" onclick="frepApagarTodos()">🗑️ Apagar todos os registos deste fornecedor</button>
     <button class="em-btn em-cancel" style="width:100%" onclick="fecharFornRelatorio()">Fechar</button>
   </div>
+</div>
+
+<!-- FATURA: recorte -->
+<div id="fat-crop-bg">
+  <div class="fat-crop-top">Arraste o dedo para desenhar um retângulo só à volta da tabela (códigos + preço)<small>Só o que ficar dentro do retângulo é lido — fica mais rápido e certo</small></div>
+  <div class="fat-crop-wrap"><div id="fat-crop-stage"></div></div>
+  <div class="fat-crop-btns"><button onclick="fatCropFechar()">✕</button><button onclick="fatCropOk(true)">Ler tudo</button><button class="ok" onclick="fatCropOk(false)">✓ Ler recorte</button></div>
 </div>
 
 <!-- FATURA: marcar coluna na foto -->
@@ -2243,26 +2263,25 @@ function fatNova(){
 ['f-fat-cam','f-fat-gal'].forEach(id=>{
   document.getElementById(id).onchange=function(e){
     const f=e.target.files[0];e.target.value='';
-    if(f)processarFatura(f);
+    if(f){if(/^image\//.test(f.type))fatAbrirCrop(f);else processarFatura(f);}
   };
 });
 
-function prepararImagemFatura(file){
+function prepararImagemFatura(file,crop){
   return new Promise((res,rej)=>{
-    const url=URL.createObjectURL(file);
-    const img=new Image();
+    const url=URL.createObjectURL(file),img=new Image();
     img.onload=()=>{
-      const MAX=2600,sc=Math.min(1,MAX/Math.max(img.width,img.height));
-      const c=document.createElement('canvas');
-      c.width=Math.round(img.width*sc);c.height=Math.round(img.height*sc);
-      const x=c.getContext('2d');
-      x.drawImage(img,0,0,c.width,c.height);
-      // cinza + contraste (ajuda o OCR em fotos de telemóvel)
+      const sx=crop?Math.round(crop.x0*img.width):0,sy=crop?Math.round(crop.y0*img.height):0;
+      const sw=crop?Math.max(20,Math.round((crop.x1-crop.x0)*img.width)):img.width;
+      const sh=crop?Math.max(20,Math.round((crop.y1-crop.y0)*img.height)):img.height;
+      const m=Math.max(sw,sh),sc=m<2200?Math.min(4,2400/m):(m>2600?2600/m:1);   // auto-ajuste: amplia o que é pequeno
+      const c=document.createElement('canvas');c.width=Math.round(sw*sc);c.height=Math.round(sh*sc);
+      const x=c.getContext('2d');x.imageSmoothingEnabled=true;x.imageSmoothingQuality='high';
+      x.drawImage(img,sx,sy,sw,sh,0,0,c.width,c.height);
       const d=x.getImageData(0,0,c.width,c.height),p=d.data;
       for(let i=0;i<p.length;i+=4){
         let g=0.299*p[i]+0.587*p[i+1]+0.114*p[i+2];
-        g=(g-128)*1.35+128+10;
-        g=g<0?0:g>255?255:g;
+        g=(g-128)*1.2+128+6;g=g<0?0:g>255?255:g;
         p[i]=p[i+1]=p[i+2]=g;
       }
       x.putImageData(d,0,0);
@@ -2272,8 +2291,37 @@ function prepararImagemFatura(file){
     img.src=url;
   });
 }
-
-async function processarFatura(file){
+let CROP={file:null,r:null,url:null};
+function fatAbrirCrop(file){
+  if(CROP.url)URL.revokeObjectURL(CROP.url);
+  CROP={file,r:null,url:URL.createObjectURL(file)};
+  const st=document.getElementById('fat-crop-stage');
+  st.innerHTML='<img src="'+CROP.url+'" alt=""><div id="fat-crop-sel"></div>';
+  document.getElementById('fat-crop-bg').classList.add('open');
+  const img=st.querySelector('img'),sel=document.getElementById('fat-crop-sel');
+  let a=null;
+  const pt=e=>{const b=img.getBoundingClientRect();return {x:Math.min(1,Math.max(0,(e.clientX-b.left)/b.width)),y:Math.min(1,Math.max(0,(e.clientY-b.top)/b.height))};};
+  st.onpointerdown=e=>{a=pt(e);CROP.r=null;sel.style.display='none';try{st.setPointerCapture(e.pointerId);}catch(_){}};
+  st.onpointermove=e=>{
+    if(!a)return;const b=pt(e),r={x0:Math.min(a.x,b.x),y0:Math.min(a.y,b.y),x1:Math.max(a.x,b.x),y1:Math.max(a.y,b.y)};
+    CROP.r=r;sel.style.cssText='display:block;left:'+r.x0*100+'%;top:'+r.y0*100+'%;width:'+(r.x1-r.x0)*100+'%;height:'+(r.y1-r.y0)*100+'%';
+  };
+  st.onpointerup=()=>{a=null;if(CROP.r&&(CROP.r.x1-CROP.r.x0<0.05||CROP.r.y1-CROP.r.y0<0.03)){CROP.r=null;sel.style.display='none';}};
+}
+function fatCropFechar(){document.getElementById('fat-crop-bg').classList.remove('open');}
+function fatCropOk(todo){
+  document.getElementById('fat-crop-bg').classList.remove('open');
+  processarFatura(CROP.file,todo?null:CROP.r);
+}
+function fatRemover(i){
+  FAT.linhas.forEach((x,k)=>{
+    const pe=document.getElementById('fat-preco-'+k),ck=document.getElementById('fat-chk-'+k);
+    if(pe){const v=parseFloat(pe.value);x.preco=isNaN(v)?null:v;}
+    if(ck)x.chk=ck.checked;
+  });
+  FAT.linhas.splice(i,1);renderFatura();
+}
+async function processarFatura(file,crop){
   if(FAT.busy)return;
   if(!DADOS.length){toast('Carregue primeiro o Excel de produtos','err');return;}
   FAT.busy=true;
@@ -2287,7 +2335,7 @@ async function processarFatura(file){
       await fatLerIA(file,KEY,ePdf);FAT.busy=false;document.getElementById('fat-prog').style.display='none';return;
     }
     fatProg('A preparar imagem…',0.03);
-    const {canvas,url}=await prepararImagemFatura(file);
+    const {canvas,url}=await prepararImagemFatura(file,crop);
     FAT.canvas=canvas;FAT.teach=null;
     const prev=document.getElementById('fat-prev');prev.src=url;prev.style.display='block';
     fatProg('A carregar leitor de texto…',0.08);
@@ -2540,7 +2588,7 @@ function analisarFatura(data,W,extra,manter){
   const achados=[]; // 1.ª passagem: que linhas têm um artigo
   L.forEach((l,li)=>{
     const toks=l.text.split(/[^A-Za-z0-9]+/).filter(t=>t.length>=4).concat((l.text.match(/\d(?:[ .\-]?\d){11,15}/g)||[]).map(x=>x.replace(/\D/g,'')));
-    let prod=null,tok=null,gtinFora=null;
+    let prod=null,tok=null,gtinFora=null,gtinDuv=null;
     for(const t of toks){
       let k=fatNorm(t),alt=null;
       if(k.length>=8&&(k.match(/\d/g)||[]).length/k.length>=0.7)alt=k.replace(/O/g,'0').replace(/[IL]/g,'1');
@@ -2550,9 +2598,11 @@ function analisarFatura(data,W,extra,manter){
         if(!pr)pr=prodPorEAN14(c,idx12); // EAN-14 → ignora o 1.º dígito, compara 12
         if(pr){prod=pr;tok=t;break;}
         if(!gtinFora&&gtinValido(c))gtinFora={cod:c,tok:t};
+        else if(!gtinDuv&&/^\d{8,14}$/.test(c))gtinDuv={cod:c,tok:t,duv:true};
       }
       if(prod)break;
     }
+    if(!prod&&!gtinFora&&gtinDuv)gtinFora=gtinDuv;
     if(prod||gtinFora)achados.push({li,l,prod,tok:prod?tok:gtinFora.tok,gtin:gtinFora});
   });
 
@@ -2588,7 +2638,7 @@ function analisarFatura(data,W,extra,manter){
     }else{
       if(preco==null||vistos.has(a.gtin.cod))return;
       vistos.add(a.gtin.cod);
-      encontrados.push({cod:a.gtin.cod,prod:null,nome:a.gtin.cod,preco,chips,fora:true,metodo,raw});
+      encontrados.push({cod:a.gtin.cod,prod:null,nome:a.gtin.cod,preco,chips,fora:true,metodo,raw,duv:!!a.gtin.duv});
     }
   });
   (function(){ // o OCR por vezes perde o ponto decimal: 10351 → 10.351
@@ -2627,13 +2677,14 @@ function renderFatura(){
   box.innerHTML=L.map((x,i)=>{
     const chips=x.chips.length>1?`<div class="fat-chips">${x.chips.map(c=>`<span class="fat-chip" onclick="fatSetPreco(${i},${c})">${c.toFixed(2)}</span>`).join('')}</div>`:'';
     return `<div class="fat-row ${x.fora?'off':''}" id="fat-row-${i}">
-      <input type="checkbox" id="fat-chk-${i}" ${(!x.fora&&x.preco!=null)?'checked':''} onchange="document.getElementById('fat-row-${i}').classList.toggle('off',!this.checked)">
+      <input type="checkbox" id="fat-chk-${i}" ${(x.chk!==undefined?x.chk:(!x.fora&&x.preco!=null))?'checked':''} onchange="document.getElementById('fat-row-${i}').classList.toggle('off',!this.checked)">
       <div class="fat-info">
-        <div class="fat-nome">${String(x.nome).replace(/</g,'&lt;')}${x.fora?'<span class="fat-tag">fora da base</span>':''}${(!x.fora&&x.metodo==='estimado')?'<span class="fat-tag">estimado</span>':''}</div>
+        <div class="fat-nome">${String(x.nome).replace(/</g,'&lt;')}${x.fora?'<span class="fat-tag">fora da base</span>':''}${x.duv?'<span class="fat-tag">confirmar código</span>':''}${(!x.fora&&x.metodo==='estimado')?'<span class="fat-tag">estimado</span>':''}</div>
         <div class="fat-cod">${x.cod}</div>${chips}
         <div class="fat-ant" id="fat-ant-${i}"></div>
       </div>
       <input class="fat-preco" id="fat-preco-${i}" type="number" step="0.001" inputmode="decimal" value="${x.preco!=null?x.preco:''}" placeholder="€" oninput="fatRefreshAnteriores()">
+      <button class="fat-x" title="Não considerar esta linha" onclick="fatRemover(${i})">✕</button>
     </div>`;
   }).join('');
   fatRefreshAnteriores();
