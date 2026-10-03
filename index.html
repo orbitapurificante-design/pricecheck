@@ -414,7 +414,8 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
 .fat-crop-wrap{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:8px;}
 #fat-crop-stage{position:relative;display:inline-block;touch-action:none;line-height:0;}
 #fat-crop-stage img{max-width:100%;max-height:calc(100vh - 150px);max-height:calc(100dvh - 150px);display:block;-webkit-user-select:none;user-select:none;pointer-events:none;}
-#fat-crop-sel{position:absolute;display:none;border:2px solid var(--a);background:rgba(201,168,76,.18);box-shadow:0 0 0 9999px rgba(0,0,0,.55);pointer-events:none;}
+.fat-sel{position:absolute;display:none;pointer-events:none;border:2px solid var(--a);background:rgba(201,168,76,.22);}
+.fat-sel.a{border-color:#10b981;background:rgba(16,185,129,.22);}
 .fat-crop-btns{display:flex;gap:8px;padding:10px 12px;background:var(--s1);}
 .fat-crop-btns button{flex:1;padding:12px 6px;border:none;border-radius:var(--r8);font-weight:700;font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;background:var(--s2);color:var(--text);}
 .fat-crop-btns button.ok{background:var(--a);color:#1a2340;}
@@ -747,9 +748,9 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
 
 <!-- FATURA: recorte -->
 <div id="fat-crop-bg">
-  <div class="fat-crop-top">Arraste o dedo para desenhar um retângulo só à volta da tabela (códigos + preço)<small>Só o que ficar dentro do retângulo é lido — fica mais rápido e certo</small></div>
+  <div class="fat-crop-top"><span id="fat-crop-t"></span><small id="fat-crop-s"></small></div>
   <div class="fat-crop-wrap"><div id="fat-crop-stage"></div></div>
-  <div class="fat-crop-btns"><button onclick="fatCropFechar()">✕</button><button onclick="fatCropOk(true)">Ler tudo</button><button class="ok" onclick="fatCropOk(false)">✓ Ler recorte</button></div>
+  <div class="fat-crop-btns" id="fat-crop-btns"></div>
 </div>
 
 <!-- FATURA: marcar coluna na foto -->
@@ -2267,51 +2268,126 @@ function fatNova(){
   };
 });
 
-function prepararImagemFatura(file,crop){
-  return new Promise((res,rej)=>{
-    const url=URL.createObjectURL(file),img=new Image();
-    img.onload=()=>{
-      const sx=crop?Math.round(crop.x0*img.width):0,sy=crop?Math.round(crop.y0*img.height):0;
-      const sw=crop?Math.max(20,Math.round((crop.x1-crop.x0)*img.width)):img.width;
-      const sh=crop?Math.max(20,Math.round((crop.y1-crop.y0)*img.height)):img.height;
-      const m=Math.max(sw,sh),sc=m<2200?Math.min(4,2400/m):(m>2600?2600/m:1);   // auto-ajuste: amplia o que é pequeno
-      const c=document.createElement('canvas');c.width=Math.round(sw*sc);c.height=Math.round(sh*sc);
-      const x=c.getContext('2d');x.imageSmoothingEnabled=true;x.imageSmoothingQuality='high';
-      x.drawImage(img,sx,sy,sw,sh,0,0,c.width,c.height);
-      const d=x.getImageData(0,0,c.width,c.height),p=d.data;
-      for(let i=0;i<p.length;i+=4){
-        let g=0.299*p[i]+0.587*p[i+1]+0.114*p[i+2];
-        g=(g-128)*1.2+128+6;g=g<0?0:g>255?255:g;
-        p[i]=p[i+1]=p[i+2]=g;
-      }
-      x.putImageData(d,0,0);
-      res({canvas:c,url});
-    };
-    img.onerror=()=>{URL.revokeObjectURL(url);rej(new Error('Imagem inválida'));};
-    img.src=url;
-  });
+async function prepararImagemFatura(file,crop){
+  let img,url=URL.createObjectURL(file);
+  try{img=await createImageBitmap(file,{imageOrientation:'from-image'});}
+  catch(e){img=await new Promise((res,rej)=>{const im=new Image();im.onload=()=>res(im);im.onerror=()=>rej(new Error('Imagem inválida'));im.src=url;});}
+  const sx=crop?Math.round(crop.x0*img.width):0,sy=crop?Math.round(crop.y0*img.height):0;
+  const sw=crop?Math.max(20,Math.round((crop.x1-crop.x0)*img.width)):img.width;
+  const sh=crop?Math.max(20,Math.round((crop.y1-crop.y0)*img.height)):img.height;
+  const m=Math.max(sw,sh),sc=m<2200?Math.min(4,2400/m):(m>2600?2600/m:1);
+  const c=document.createElement('canvas');c.width=Math.round(sw*sc);c.height=Math.round(sh*sc);
+  const x=c.getContext('2d');x.imageSmoothingEnabled=true;x.imageSmoothingQuality='high';
+  x.drawImage(img,sx,sy,sw,sh,0,0,c.width,c.height);
+  const d=x.getImageData(0,0,c.width,c.height),p=d.data;
+  for(let i=0;i<p.length;i+=4){
+    let g=0.299*p[i]+0.587*p[i+1]+0.114*p[i+2];
+    g=(g-128)*1.2+128+6;g=g<0?0:g>255?255:g;
+    p[i]=p[i+1]=p[i+2]=g;
+  }
+  x.putImageData(d,0,0);
+  return {canvas:c,url,sc,sx,sy};
 }
-let CROP={file:null,r:null,url:null};
+let CROP={file:null,url:null,step:1,a:null,b:null,cur:null};
+function fatSetSel(el,r){
+  if(!r){el.style.display='none';return;}
+  el.style.cssText='display:block;left:'+r.x0*100+'%;top:'+r.y0*100+'%;width:'+(r.x1-r.x0)*100+'%;height:'+(r.y1-r.y0)*100+'%';
+}
 function fatAbrirCrop(file){
   if(CROP.url)URL.revokeObjectURL(CROP.url);
-  CROP={file,r:null,url:URL.createObjectURL(file)};
+  CROP={file,url:URL.createObjectURL(file),step:1,a:null,b:null,cur:null};
   const st=document.getElementById('fat-crop-stage');
-  st.innerHTML='<img src="'+CROP.url+'" alt=""><div id="fat-crop-sel"></div>';
+  st.innerHTML='<img src="'+CROP.url+'" alt=""><div class="fat-sel a" id="fat-sel-a"></div><div class="fat-sel" id="fat-sel-b"></div>';
   document.getElementById('fat-crop-bg').classList.add('open');
-  const img=st.querySelector('img'),sel=document.getElementById('fat-crop-sel');
-  let a=null;
-  const pt=e=>{const b=img.getBoundingClientRect();return {x:Math.min(1,Math.max(0,(e.clientX-b.left)/b.width)),y:Math.min(1,Math.max(0,(e.clientY-b.top)/b.height))};};
-  st.onpointerdown=e=>{a=pt(e);CROP.r=null;sel.style.display='none';try{st.setPointerCapture(e.pointerId);}catch(_){}};
+  const img=st.querySelector('img'),selA=document.getElementById('fat-sel-a'),selB=document.getElementById('fat-sel-b');
+  let ini=null;
+  const pt=e=>{const bb=img.getBoundingClientRect();return {x:Math.min(1,Math.max(0,(e.clientX-bb.left)/bb.width)),y:Math.min(1,Math.max(0,(e.clientY-bb.top)/bb.height))};};
+  const alvo=()=>CROP.step===1?selA:selB;
+  st.onpointerdown=e=>{ini=pt(e);CROP.cur=null;try{st.setPointerCapture(e.pointerId);}catch(_){}};
   st.onpointermove=e=>{
-    if(!a)return;const b=pt(e),r={x0:Math.min(a.x,b.x),y0:Math.min(a.y,b.y),x1:Math.max(a.x,b.x),y1:Math.max(a.y,b.y)};
-    CROP.r=r;sel.style.cssText='display:block;left:'+r.x0*100+'%;top:'+r.y0*100+'%;width:'+(r.x1-r.x0)*100+'%;height:'+(r.y1-r.y0)*100+'%';
+    if(!ini)return;const q=pt(e);
+    CROP.cur={x0:Math.min(ini.x,q.x),y0:Math.min(ini.y,q.y),x1:Math.max(ini.x,q.x),y1:Math.max(ini.y,q.y)};
+    fatSetSel(alvo(),CROP.cur);
   };
-  st.onpointerup=()=>{a=null;if(CROP.r&&(CROP.r.x1-CROP.r.x0<0.05||CROP.r.y1-CROP.r.y0<0.03)){CROP.r=null;sel.style.display='none';}};
+  st.onpointerup=()=>{
+    ini=null;const r=CROP.cur;CROP.cur=null;
+    if(r&&(r.x1-r.x0)>0.02&&(r.y1-r.y0)>0.03){CROP[CROP.step===1?'a':'b']=r;}
+    fatSetSel(alvo(),CROP[CROP.step===1?'a':'b']);
+  };
+  fatCropPasso(1);
+}
+function fatCropPasso(n){
+  CROP.step=n;
+  const t=document.getElementById('fat-crop-t'),sm=document.getElementById('fat-crop-s'),bt=document.getElementById('fat-crop-btns');
+  fatSetSel(document.getElementById('fat-sel-a'),CROP.a);fatSetSel(document.getElementById('fat-sel-b'),CROP.b);
+  if(n===1){
+    t.textContent='1/2 · Desenhe a coluna dos CÓDIGOS DE BARRAS';
+    sm.textContent='Arraste o dedo sobre os números, da 1.ª à última linha (sem o cabeçalho). Pode refazer.';
+    bt.innerHTML='<button onclick="fatCropFechar()">✕</button><button onclick="fatCropOk(true)">Ler tudo (auto)</button><button class="ok" onclick="fatCropNext()">Seguinte →</button>';
+  }else{
+    t.textContent='2/2 · Desenhe a coluna do PREÇO';
+    sm.textContent='Só o preço unitário, da 1.ª à última linha (sem o cabeçalho). Pode refazer.';
+    bt.innerHTML='<button onclick="fatCropPasso(1)">← Voltar</button><button class="ok" onclick="fatCropLer()">✓ Ler as 2 colunas</button>';
+  }
 }
 function fatCropFechar(){document.getElementById('fat-crop-bg').classList.remove('open');}
-function fatCropOk(todo){
-  document.getElementById('fat-crop-bg').classList.remove('open');
-  processarFatura(CROP.file,todo?null:CROP.r);
+function fatCropNext(){if(!CROP.a){toast('Desenhe primeiro a coluna dos códigos','err');return;}fatCropPasso(2);}
+function fatCropOk(todo){fatCropFechar();processarFatura(CROP.file,null);}
+function fatCropLer(){
+  if(!CROP.a||!CROP.b){toast('Desenhe a coluna do preço','err');return;}
+  fatCropFechar();fatLerColunas(CROP.file,CROP.a,CROP.b);
+}
+function fatLinhasY(data,sc,sy){
+  return fatLinhasOCR(data).map(l=>{
+    if(!l.words.length)return {text:l.text,y:null,h:0};
+    const y0=Math.min(...l.words.map(w=>w.y0)),y1=Math.max(...l.words.map(w=>w.y1));
+    return {text:l.text,y:sy+(y0+y1)/2/sc,h:(y1-y0)/sc};
+  });
+}
+// lê só a coluna dos códigos e só a do preço (com whitelist de dígitos) e junta por linha
+async function fatLerColunas(file,rA,rB){
+  if(FAT.busy)return;
+  if(!DADOS.length){toast('Carregue primeiro o Excel de produtos','err');return;}
+  FAT.busy=true;
+  document.getElementById('fat-pick').style.display='none';
+  document.getElementById('fat-result').style.display='none';
+  try{
+    fatProg('A preparar colunas…',0.05);
+    const A=await prepararImagemFatura(file,rA),B=await prepararImagemFatura(file,rB);
+    fatProg('A carregar leitor de texto…',0.12);
+    await carregarTesseract();
+    const worker=await Tesseract.createWorker('eng',1,{logger:m=>{if(m.status==='recognizing text')fatProg('A ler as colunas… '+Math.round(m.progress*100)+'%',0.2+m.progress*0.7);}});
+    await worker.setParameters({tessedit_pageseg_mode:'6',tessedit_char_whitelist:'0123456789 '});
+    const dA=(await worker.recognize(A.canvas)).data;
+    await worker.setParameters({tessedit_char_whitelist:'0123456789,. '});
+    const dB=(await worker.recognize(B.canvas)).data;
+    await worker.terminate();
+    const la=fatLinhasY(dA,A.sc,A.sy),lb=fatLinhasY(dB,B.sc,B.sy);
+    const usados=new Set(),rows=[];
+    la.forEach((c,i)=>{
+      const dig=c.text.replace(/\D/g,'');
+      if(dig.length<8)return;                       // linha sem código de barras → ignorada
+      let j=-1;
+      if(c.y!=null){
+        let bd=1e9;lb.forEach((q,k)=>{if(usados.has(k)||q.y==null)return;const d=Math.abs(q.y-c.y);if(d<bd){bd=d;j=k;}});
+        if(bd>Math.max(c.h,12)*1.2)j=-1;
+      }else if(lb[i])j=i;
+      let pr='';
+      if(j>=0){usados.add(j);const m=lb[j].text.match(/\d{1,3}(?:\.\d{3})*,\d{1,4}|\d+[.,]\d{1,4}|\d{3,}/);pr=m?m[0]:'';}
+      rows.push({cod:dig,pr});
+    });
+    // casas decimais mais comuns (para repor o ponto que o OCR perdeu)
+    const cont={};rows.forEach(r=>{const m=r.pr.match(/[.,](\d{1,4})$/);if(m)cont[m[1].length]=(cont[m[1].length]||0)+1;});
+    let dec=0,best=0;Object.keys(cont).forEach(k=>{if(cont[k]>best){best=cont[k];dec=+k;}});
+    const lines=rows.map((r,i)=>({text:r.cod+' '+r.pr,words:[
+      {text:r.cod,bbox:{x0:0,x1:100,y0:i*20,y1:i*20+15}},
+      ...(r.pr?[{text:r.pr,bbox:{x0:200,x1:300,y0:i*20,y1:i*20+15}}]:[])]}));
+    FAT.canvas=null;FAT.teach={cx:250,tol:90,n:1,rankR:0,dec};
+    analisarFatura({lines},400);
+    toast('✓ '+rows.length+' linha(s) com código · '+FAT.linhas.length+' na lista','ok');
+  }catch(err){console.error(err);toast('Erro: '+(err.message||err),'err');fatNova();}
+  FAT.busy=false;
+  document.getElementById('fat-prog').style.display='none';
 }
 function fatRemover(i){
   FAT.linhas.forEach((x,k)=>{
