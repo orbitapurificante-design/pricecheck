@@ -401,6 +401,11 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
 .prow .pnome{color:#1a2340;font-weight:700;}
 .prow .pcod{color:#1a2340;opacity:.85;font-weight:600;}
 .prow .pthumb-e{background:#eef1f6;}
+
+/* sem seleção de texto / dicionário ao tocar depressa nas famílias e produtos */
+.fam-h,.fam-h *,.prow,.prow *,.fitem,.fitem *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
+/* preço: vinho tinto */
+.prow .ppreco-v{color:#722f37;font-weight:800;}
 </style>
 </head>
 <body>
