@@ -391,6 +391,16 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
 .fat-box.dim{border-color:rgba(148,163,184,.7);background:rgba(148,163,184,.12);}
 .fat-box:active{background:rgba(16,185,129,.55);border-color:#10b981;}
 .fat-raw{display:none;white-space:pre-wrap;font-family:'JetBrains Mono',monospace;font-size:10px;background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:8px;max-height:30vh;overflow:auto;margin-bottom:10px;color:var(--muted);}
+
+.frow{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.fnovo{background:var(--a);color:#1a2340;border:none;border-radius:16px;padding:6px 14px;font-size:13px;font-weight:800;cursor:pointer;font-family:'Inter',sans-serif;}
+.fnovo:active{background:var(--ag);}
+/* ── cartões de produtos: cinza transparente, letras azul escuro ── */
+.prow{background:rgba(100,116,139,.16);border:1px solid rgba(26,35,64,.14);}
+.prow:active{background:rgba(100,116,139,.32);}
+.prow .pnome{color:#1a2340;font-weight:700;}
+.prow .pcod{color:#1a2340;opacity:.85;font-weight:600;}
+.prow .pthumb-e{background:rgba(26,35,64,.1);}
 </style>
 </head>
 <body>
@@ -640,8 +650,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
 
 <!-- FORNECEDORES -->
 <div class="screen" id="m4">
-  <div class="ftop"><div class="ftitle">Fornecedores</div><div class="fsub">Selecione o fornecedor ativo para registar preços</div></div>
-  <button class="fadd" onclick="abrirFornModal()">+ Adicionar Fornecedor</button>
+  <div class="ftop"><div class="frow"><div class="ftitle">Fornecedores</div><button class="fnovo" onclick="abrirFornModal()">+ novo</button></div><div class="fsub">Selecione o fornecedor ativo para registar preços</div></div>
   <div class="flist" id="forn-list"></div>
 </div>
 
@@ -1494,20 +1503,25 @@ function renderProdutos(){
   // Render diferido para não bloquear a UI
   if(window._prodTimer)clearTimeout(window._prodTimer);
   window._prodTimer=setTimeout(_doRenderProdutos,0);}
+let PROD_LIM=150,PROD_N=0,PROD_CORTE=false;
 function _doRenderProdutos(){
+  PROD_N=0;PROD_CORTE=false;
   const busca=(document.getElementById('in-busca').value||'').toLowerCase().trim();
   const c=document.getElementById('produtos-lista');
   if(!DADOS.length){c.innerHTML=`<div class="empty"><div class="empty-ico">📊</div><div class="empty-title">Sem catálogo</div><div class="empty-sub">Use o menu ☰ para carregar o Excel</div></div>`;return;}
+  if(window._ultBusca!==busca){PROD_LIM=150;window._ultBusca=busca;}
   const filt=busca?DADOS.filter(p=>p.nome.toLowerCase().includes(busca)||(p.cod&&p.cod.includes(busca))||(p.ean&&p.ean.includes(busca))):DADOS;
   const cats=[...new Set(filt.map(p=>p.cat))].sort();
   let html='';
   cats.forEach(cat=>{
     const prods=filt.filter(p=>p.cat===cat);if(!prods.length)return;
-    if(FAM_ESTADOS[cat]===undefined)FAM_ESTADOS[cat]=false;
+    if(FAM_ESTADOS[cat]===undefined)FAM_ESTADOS[cat]=true;
+    const aberto=busca?true:!FAM_ESTADOS[cat];
     const ce=cat.replace(/'/g,"\\'");
     html+=`<div class="fam-h" onclick="toggleFam('${ce}')"><span>${cat} (${prods.length})</span><span>${FAM_ESTADOS[cat]?'▶':'▼'}</span></div>
-    <div class="fam-c${FAM_ESTADOS[cat]?' hidden':''}">`;
-    prods.forEach(p=>{
+    <div class="fam-c${aberto?'':' hidden'}">`;
+    (aberto?prods:[]).forEach(p=>{
+      if(PROD_N++>=PROD_LIM){PROD_CORTE=true;return;}
       const cod=getCod(p);const imgUrl=getImg(p);
       const pf=PRECOS_DB[cod]||{};const nf=Object.keys(pf).length;
       let badges='';
@@ -1522,7 +1536,7 @@ function _doRenderProdutos(){
         }
         badges+=`<span class="pb pb-muted">${nf} fornec.</span>`;
       }
-      const imgHtml=imgUrl?`<img src="${imgUrl}" class="pthumb" onerror="this.outerHTML='<div class=pthumb-e>📦</div>'">`:`<div class="pthumb-e">📦</div>`;
+      const imgHtml=imgUrl?`<img src="${imgUrl}" loading="lazy" decoding="async" class="pthumb" onerror="this.outerHTML='<div class=pthumb-e>📦</div>'">`:`<div class="pthumb-e">📦</div>`;
       html+=`<div class="prow" onclick="mostrarProdModal(DADOS.find(x=>x.id===${p.id}))">
         ${imgHtml}
         <div class="pinfo"><div class="pnome">${p.nome}</div><div class="pcod">${cod}${p.un?' · '+p.un:''}</div><div class="pbadges">${badges}</div></div>
@@ -1532,6 +1546,7 @@ function _doRenderProdutos(){
     html+='</div>';
   });
   if(!html)html=`<div class="empty"><div class="empty-ico">🔍</div><div class="empty-title">Sem resultados</div></div>`;
+  if(PROD_CORTE)html+=`<button class="fadd" style="margin:8px 0;width:100%" onclick="PROD_LIM+=150;renderProdutos()">Mostrar mais produtos…</button>`;
   c.innerHTML=html;
 }
 function toggleFam(cat){FAM_ESTADOS[cat]=!FAM_ESTADOS[cat];renderProdutos();}
@@ -3062,10 +3077,29 @@ document.getElementById('f-fotos-json').onchange=async function(e){
   toast(total?('✓ '+total+' fotos importadas'+(vazios.length?' · sem fotos reconhecidas: '+vazios.join(', '):'')):'Nenhuma foto reconhecida nos ficheiros',total?'ok':'err');
 };
 
+
+// fotos: carrega em segundo plano, em lotes, sem bloquear a abertura da app
+async function carregarImgsBackground(){
+  try{
+    await abrirImgDB();
+    const keys=await new Promise(r=>{const q=imgDB.transaction(IMG_STORE,'readonly').objectStore(IMG_STORE).getAllKeys();q.onsuccess=()=>r(q.result||[]);q.onerror=()=>r([]);});
+    for(let i=0;i<keys.length;i+=40){
+      await new Promise(res=>{
+        const tx=imgDB.transaction(IMG_STORE,'readonly'),st=tx.objectStore(IMG_STORE);
+        keys.slice(i,i+40).forEach(k=>{const q=st.get(k);q.onsuccess=()=>{if(q.result)IMGS.set(k,q.result);};});
+        tx.oncomplete=res;tx.onerror=res;
+      });
+      await new Promise(r=>setTimeout(r,8));
+      if(i===200&&m2Ativo())renderProdutos();
+    }
+    if(m2Ativo())renderProdutos();
+  }catch(e){console.error(e);}
+}
+
 // ══ INIT ══
 (async()=>{
   await abrirImgDB();
-  await carregarTodasImgsDB();
+  setTimeout(carregarImgsBackground,300);
   carregar();carregarEncomendas();atualizarHeaderForn();atualizarStats();
   carregarConfigGit();atualizarGitStatus();
   if(GIT_CFG.rawUrl)atualizarDoGitHub(true);
