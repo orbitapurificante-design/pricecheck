@@ -417,6 +417,12 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
 .fat-sel{position:absolute;display:none;pointer-events:none;border:2px solid var(--a);background:rgba(201,168,76,.22);}
 .fat-sel.a{border-color:#10b981;background:rgba(16,185,129,.22);}
 .fat-rot{border:none;border-radius:8px;padding:6px 12px;font-size:15px;font-weight:800;cursor:pointer;background:var(--s2);color:var(--text);}
+.fat-pick{flex-wrap:wrap;} .fat-pick button.full{flex:1 1 100%;padding:12px 8px;}
+#fat-txt-bg{position:fixed;inset:0;z-index:9450;background:#f1f3f7;display:none;flex-direction:column;padding:14px;gap:8px;}
+#fat-txt-bg.open{display:flex;}
+#fat-txt-bg .t{font-size:15px;font-weight:800;color:#1a2340;}
+#fat-txt-bg .h{font-size:11px;color:#475569;line-height:1.45;}
+#fat-txt{flex:1;width:100%;border:1.5px solid #cbd5e1;border-radius:10px;padding:10px;font-size:13px;font-family:'JetBrains Mono',monospace;color:#1a2340;background:#fff;resize:none;outline:none;}
 .fat-crop-btns{display:flex;gap:8px;padding:10px 12px;background:var(--s1);}
 .fat-crop-btns button{flex:1;padding:12px 6px;border:none;border-radius:var(--r8);font-weight:700;font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;background:var(--s2);color:var(--text);}
 .fat-crop-btns button.ok{background:var(--a);color:#1a2340;}
@@ -747,6 +753,14 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
   </div>
 </div>
 
+<!-- FATURA: colar texto -->
+<div id="fat-txt-bg">
+  <div class="t">📋 Colar texto capturado</div>
+  <div class="h">Abra a foto da fatura na Galeria e use <b>Capturar texto da imagem</b> (Samsung: ícone «T»; Google Lens/Fotos: «Copiar texto»). Copie e cole aqui. Pode vir <b>por linhas</b> (código e preço juntos) ou <b>por colunas</b> (primeiro todos os códigos, depois todos os preços). Preços de 0,10 sem código são ignorados.</div>
+  <textarea id="fat-txt" placeholder="Cole aqui o texto..."></textarea>
+  <div class="fat-crop-btns" style="padding:0"><button onclick="fatTxtFechar()">✕</button><button onclick="fatTxtColar()">📋 Colar</button><button class="ok" onclick="fatTxtLer()">✓ Ler texto</button></div>
+</div>
+
 <!-- FATURA: recorte -->
 <div id="fat-crop-bg">
   <div class="fat-crop-top"><span id="fat-crop-t"></span><small id="fat-crop-s"></small><div style="display:flex;gap:6px;align-items:center;margin-top:8px"><span id="fat-crop-ang" style="font-size:11px;color:var(--muted);flex:1"></span><button class="fat-rot" onclick="fatGirar(-0.5)">⟲</button><button class="fat-rot" onclick="fatGirar(0.5)">⟳</button></div></div>
@@ -776,6 +790,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
     <div class="fat-pick" id="fat-pick">
       <button onclick="document.getElementById('f-fat-cam').click()">📸 Tirar foto</button>
       <button class="sec" onclick="document.getElementById('f-fat-gal').click()">🖼️ Galeria / PDF</button>
+      <button class="sec full" onclick="fatTxtAbrir()">📋 Colar texto capturado da imagem</button>
     </div>
         <div class="fat-prog" id="fat-prog"><div class="fat-prog-txt" id="fat-prog-txt">A preparar…</div><div class="fat-prog-bar"><div class="fat-prog-fill" id="fat-prog-fill"></div></div></div>
     <div id="fat-result" style="display:none">
@@ -1039,7 +1054,10 @@ window.addEventListener('online',()=>{
 window.addEventListener('offline',atualizarGitStatus);
 
 // ══ NAV — cada tab mostra SÓ o seu conteúdo ══
+var NAV_STACK=[],NAV_NOPUSH=false;
 function nav(id){
+  const _atual=(document.querySelector('.screen.active')||{}).id;
+  if(!NAV_NOPUSH&&_atual&&_atual!==id){NAV_STACK.push(_atual);if(NAV_STACK.length>20)NAV_STACK.shift();}
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.bnav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById(id).classList.add('active');
@@ -3299,6 +3317,82 @@ async function carregarImgsBackground(){
     if(m2Ativo())renderProdutos();
   }catch(e){console.error(e);}
 }
+
+
+// ══ TEXTO CAPTURADO DA IMAGEM (por linhas ou por colunas) ══
+function fatTxtAbrir(){document.getElementById('fat-txt-bg').classList.add('open');}
+function fatTxtFechar(){document.getElementById('fat-txt-bg').classList.remove('open');}
+async function fatTxtColar(){
+  try{document.getElementById('fat-txt').value=await navigator.clipboard.readText();}
+  catch(e){toast('Toque longo no campo e escolha «Colar»','err');}
+}
+function fatTxtLer(){
+  if(!DADOS.length){toast('Carregue primeiro o Excel de produtos','err');return;}
+  const linhas=document.getElementById('fat-txt').value.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+  if(!linhas.length){toast('Cole primeiro o texto','err');return;}
+  const reCod=/\b\d{8,14}\b/,rePr=/\d{1,3}(?:\.\d{3})*,\d{1,4}|\d+[.,]\d{1,4}/;
+  const rowLines=[],codes=[],prices=[],extra=[];
+  linhas.forEach(l=>{
+    let cod=null,rest=l;
+    const soDig=/^[\d\s]+$/.test(l)?l.replace(/\s/g,''):null;
+    if(soDig&&soDig.length>=8&&soDig.length<=14){cod=soDig;rest='';}
+    else{const m=l.match(reCod);if(m){cod=m[0];rest=l.replace(m[0],' ');}}
+    const pm=rest.match(rePr),pr=pm?pm[0]:'';
+    const soPreco=pr&&rest.replace(pr,'').replace(/[€\s]/g,'')==='';
+    if(cod&&pr)rowLines.push(l);            // código e preço na mesma linha
+    else if(cod)codes.push(cod);            // só código (texto por colunas)
+    else if(soPreco)prices.push(pr);        // só preço (texto por colunas)
+    else extra.push(l);
+  });
+  let pv=prices.slice();
+  if(codes.length&&codes.length!==pv.length)pv=pv.filter(p=>Math.abs(fatValorNum(p)-0.10)>0.0001);   // 0,10 sem código = sistema
+  const pares=[];
+  if(codes.length){
+    if(codes.length!==pv.length){toast('Códigos: '+codes.length+' · Preços: '+pv.length+' — não batem certo. Confirme o texto colado.','err');return;}
+    codes.forEach((c,i)=>pares.push({cod:c,pr:pv[i]}));
+  }
+  if(!pares.length&&!rowLines.length){toast('Não encontrei códigos de barras no texto','err');return;}
+  const cont={};pares.forEach(r=>{const m=r.pr.match(/[.,](\d{1,4})$/);if(m)cont[m[1].length]=(cont[m[1].length]||0)+1;});
+  let dec=0,best=0;Object.keys(cont).forEach(k=>{if(cont[k]>best){best=cont[k];dec=+k;}});
+  const lines=[
+    ...extra.slice(0,20).map(t=>({text:t,words:[]})),
+    ...rowLines.map(t=>({text:t,words:[]})),
+    ...pares.map((r,i)=>({text:r.cod+' '+r.pr,words:[
+      {text:r.cod,bbox:{x0:0,x1:100,y0:i*20,y1:i*20+15}},
+      {text:r.pr,bbox:{x0:200,x1:300,y0:i*20,y1:i*20+15}}]}))
+  ];
+  FAT.canvas=null;FAT.teach=pares.length?{cx:250,tol:90,n:1,rankR:0,dec}:null;
+  fatTxtFechar();
+  analisarFatura({lines},400);
+  toast('✓ '+(pares.length+rowLines.length)+' linha(s) lidas · '+FAT.linhas.length+' na lista','ok');
+}
+
+// ══ BOTÃO "VOLTAR" DO ANDROID / PROTEÇÃO CONTRA SAÍDA ACIDENTAL ══
+function fecharCamadaTopo(){
+  const q=id=>document.getElementById(id),ab=id=>q(id)&&q(id).classList.contains('open');
+  if(ab('fat-txt-bg')){fatTxtFechar();return true;}
+  if(ab('fat-crop-bg')){fatCropFechar();return true;}
+  if(ab('fat-tap-bg')){fatFecharTap();return true;}
+  if(typeof scannerAberto!=='undefined'&&scannerAberto){fecharScanner();return true;}
+  if(typeof encScannerAberto!=='undefined'&&encScannerAberto){fecharEncScanner();return true;}
+  const mapa={'fat-modal-bg':fecharFatura,'frep-modal-bg':fecharFornRelatorio,'pmodal-bg':fecharPmodal,'fmodal-bg':fecharFornModal,'git-modal-bg':fecharConfigGit};
+  const abertos=Array.from(document.querySelectorAll('.modal-bg.open'));
+  if(abertos.length){const m=abertos[abertos.length-1];(mapa[m.id]||function(){m.classList.remove('open');})();return true;}
+  if(q('drawer')&&q('drawer').classList.contains('open')){fecharDrawer();return true;}
+  return false;
+}
+let _guardaOn=false,_sairOk=false;
+history.replaceState({pc:0},'');
+function armarGuarda(){if(_guardaOn)return;_guardaOn=true;history.pushState({pc:1},'');}
+document.addEventListener('pointerdown',armarGuarda,{once:true,passive:true});
+window.addEventListener('popstate',function(){
+  if(!_guardaOn)return;
+  if(fecharCamadaTopo()){history.pushState({pc:1},'');return;}                 // fecha o que estiver aberto
+  if(NAV_STACK.length){const ant=NAV_STACK.pop();NAV_NOPUSH=true;nav(ant);NAV_NOPUSH=false;history.pushState({pc:1},'');return;}   // página anterior
+  if(confirm('Sair da aplicação?')){_sairOk=true;history.back();}              // só sai se confirmar
+  else history.pushState({pc:1},'');
+});
+window.addEventListener('beforeunload',function(e){if(_sairOk)return;e.preventDefault();e.returnValue='';});
 
 // ══ INIT ══
 (async()=>{
