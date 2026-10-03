@@ -1112,11 +1112,27 @@ function getImg(p){
 }
 
 function getCod(p){return p.cod||p.ean||p.f||String(p.id);}
+let _fpCache={ref:null,n:-1,idx:null};
+function idxProdutos(){
+  if(_fpCache.ref!==DADOS||_fpCache.n!==DADOS.length)_fpCache={ref:DADOS,n:DADOS.length,idx:fatIndexProdutos()};
+  return _fpCache.idx;
+}
+// código de 14 dígitos: ignora o 1.º dígito e compara os 12 seguintes com os 12 primeiros do código na base
+function prodPorEAN14(d,m12){
+  if(!/^\d{14}$/.test(d))return null;
+  return m12.get(d.slice(1,13))||m12.get(d.slice(0,12))||m12.get(d.slice(2,14))||null;
+}
 function findProd(codigo){
-  return DADOS.find(p=>
+  const exato=DADOS.find(p=>
     (p.cod&&p.cod===codigo)||(p.ean&&p.ean===codigo)||
     (p.f&&p.f===codigo)||(p.nome&&p.nome.toLowerCase()===codigo.toLowerCase())
   );
+  if(exato)return exato;
+  const d=String(codigo||'').replace(/\D/g,'');
+  if(d.length>=4){
+    const idx=idxProdutos();
+    return idx.get(d)||idx.get(d.replace(/^0+/,''))||prodPorEAN14(d,idx.__12)||undefined;
+  }
 }
 
 // ══ CÂMARA / SCANNER ══
@@ -1280,6 +1296,7 @@ function confirmarEntradaManual(){
 function processarCodigo(codigo){
   COD_ATUAL=codigo;
   const prod=findProd(codigo);
+  if(prod&&/^\d{14}$/.test(codigo))COD_ATUAL=getCod(prod);   // preço fica ligado ao produto, não ao código da caixa
   if(prod){
     mostrarProdModal(prod);
   }else{
@@ -2502,7 +2519,7 @@ function analisarFatura(data,W,extra,manter){
   const idx=fatIndexProdutos(),idx12=idx.__12;
   const achados=[]; // 1.ª passagem: que linhas têm um artigo
   L.forEach((l,li)=>{
-    const toks=l.text.split(/[^A-Za-z0-9]+/).filter(t=>t.length>=4);
+    const toks=l.text.split(/[^A-Za-z0-9]+/).filter(t=>t.length>=4).concat((l.text.match(/\d(?:[ .\-]?\d){11,15}/g)||[]).map(x=>x.replace(/\D/g,'')));
     let prod=null,tok=null,gtinFora=null;
     for(const t of toks){
       let k=fatNorm(t),alt=null;
@@ -2510,7 +2527,7 @@ function analisarFatura(data,W,extra,manter){
       const cand=[k];if(alt&&alt!==k)cand.push(alt);
       for(const c of cand){
         let pr=idx.get(c)||(/^\d+$/.test(c)?idx.get(c.replace(/^0+/,'')):null);
-        if(!pr&&/^\d{14}$/.test(c))pr=idx12.get(c.slice(1,13)); // EAN-14 → 12 dígitos do meio
+        if(!pr)pr=prodPorEAN14(c,idx12); // EAN-14 → ignora o 1.º dígito, compara 12
         if(pr){prod=pr;tok=t;break;}
         if(!gtinFora&&gtinValido(c))gtinFora={cod:c,tok:t};
       }
@@ -2691,7 +2708,7 @@ function fatMostrarIA(d){
     let prod=null;
     for(const k of cods){
       prod=idx.get(k)||(/^\d+$/.test(k)?idx.get(k.replace(/^0+/,'')):null)
-        ||(k.length===14?idx.__12.get(k.slice(1,13)):null)||(k.length===13?idx.__12.get(k.slice(0,12)):null);
+        ||prodPorEAN14(k,idx.__12)||(k.length===13?idx.__12.get(k.slice(0,12)):null);
       if(prod)break;
     }
     if(prod){const cod=getCod(prod);if(vistos.has(cod))return;vistos.add(cod);out.push({cod,prod,nome:prod.nome,preco,chips:[],fora:false,metodo:'ia'});}
