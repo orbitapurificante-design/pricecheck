@@ -427,6 +427,35 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
 .fat-crop-btns button{flex:1;padding:12px 6px;border:none;border-radius:var(--r8);font-weight:700;font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;background:var(--s2);color:var(--text);}
 .fat-crop-btns button.ok{background:var(--a);color:#1a2340;}
 .fat-x{width:30px;height:30px;flex-shrink:0;border:none;border-radius:8px;background:rgba(239,68,68,.15);color:var(--danger);font-size:14px;cursor:pointer;align-self:center;}
+
+/* janelas ancoradas ao TOPO: o teclado numérico não tapa "Guardar preço"/"Fechar" */
+.modal-bg{align-items:flex-start !important;}
+.modal-bg .modal-card{border-radius:0 0 20px 20px !important;border-top:none !important;border-bottom:1px solid rgba(201,168,76,.25);
+  max-height:calc(var(--vvh,100vh) - 6px) !important;overflow-y:auto !important;animation:sd .22s ease-out !important;padding-bottom:20px;}
+@keyframes sd{from{transform:translateY(-100%)}to{transform:translateY(0)}}
+/* encomendas: lista de produtos com + e - */
+#enc-prod-bg{position:fixed;left:0;right:0;top:0;height:var(--vvh,100%);z-index:8700;background:#f1f3f7;display:none;flex-direction:column;}
+#enc-prod-bg.open{display:flex;}
+.encp-top{padding:12px 14px 8px;background:#fff;border-bottom:1px solid #dde2ea;}
+.encp-top .r1{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.encp-top .t{font-size:16px;font-weight:800;color:#1a2340;}
+.encp-top .f{font-size:11px;color:#475569;margin-top:2px;}
+.encp-x{border:none;background:#e2e8f0;color:#1a2340;border-radius:8px;padding:8px 12px;font-weight:800;cursor:pointer;}
+.encp-busca{width:100%;margin-top:8px;padding:11px 12px;border:1.5px solid #cbd5e1;border-radius:10px;font-size:14px;color:#1a2340;background:#fff;outline:none;font-family:'Inter',sans-serif;}
+.encp-list{flex:1;overflow-y:auto;padding:8px 10px;-webkit-overflow-scrolling:touch;}
+.encp-row{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #dde2ea;border-radius:12px;padding:8px 10px;margin-bottom:7px;}
+.encp-row.sel{border-color:var(--a);box-shadow:0 0 0 1px var(--a);}
+.encp-img{width:42px;height:42px;border-radius:8px;object-fit:cover;background:#eef1f6;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px;}
+.encp-info{flex:1;min-width:0;}
+.encp-nome{font-size:13px;font-weight:700;color:#1a2340;line-height:1.25;}
+.encp-cod{font-size:10px;color:#1a2340;opacity:.8;font-family:'JetBrains Mono',monospace;margin-top:2px;font-weight:600;}
+.encp-q{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.encp-q button{width:34px;height:34px;border:none;border-radius:50%;font-size:20px;font-weight:800;cursor:pointer;background:#e2e8f0;color:#1a2340;line-height:1;}
+.encp-q button.mais{background:var(--a);}
+.encp-q span{min-width:26px;text-align:center;font-size:16px;font-weight:800;color:#1a2340;font-family:'JetBrains Mono',monospace;}
+.encp-foot{padding:10px 14px;background:#fff;border-top:1px solid #dde2ea;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.encp-foot b{color:#1a2340;font-size:13px;}
+.encp-foot button{border:none;border-radius:10px;padding:11px 16px;font-weight:800;font-size:13px;cursor:pointer;background:var(--a);color:#1a2340;}
 </style>
 </head>
 <body>
@@ -687,9 +716,9 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
       <div class="enc-title">📦 Encomendas</div>
       <div class="enc-sub" id="enc-sub">Leituras para o fornecedor ativo</div>
     </div>
-    <button class="enc-scan-btn" onclick="abrirEncScanner()">
+    <div style="display:flex;gap:8px"><button class="enc-scan-btn" style="background:#fff;color:#1a2340;border:1.5px solid var(--a);padding:12px 12px" onclick="encProdAbrir()">📦 PRODUTOS</button><button class="enc-scan-btn" onclick="abrirEncScanner()">
       <span style="font-size:17px">📷</span> SCAN
-    </button>
+    </button></div>
   </div>
   <div class="enc-forn-sel sem" id="enc-forn-sel">
     <div class="enc-forn-dot"></div>
@@ -703,6 +732,16 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
       <div class="enc-empty-sub">Pressione SCAN para começar<br>a ler artigos para a encomenda</div>
     </div>
   </div>
+</div>
+
+<!-- ENCOMENDAS: lista de produtos com + e - -->
+<div id="enc-prod-bg">
+  <div class="encp-top">
+    <div class="r1"><div><div class="t">📦 Produtos para encomenda</div><div class="f" id="encp-forn"></div></div><button class="encp-x" onclick="encProdFechar()">✕</button></div>
+    <input class="encp-busca" id="encp-busca" type="search" placeholder="🔍 Pesquisar produto ou código..." oninput="ENCP.lim=100;encProdRender()">
+  </div>
+  <div class="encp-list" id="encp-list"></div>
+  <div class="encp-foot"><b id="encp-tot"></b><button onclick="encProdFechar()">Ver encomenda →</button></div>
 </div>
 
 <!-- SCANNER CONTÍNUO ENCOMENDAS -->
@@ -3370,6 +3409,7 @@ function fatTxtLer(){
 // ══ BOTÃO "VOLTAR" DO ANDROID / PROTEÇÃO CONTRA SAÍDA ACIDENTAL ══
 function fecharCamadaTopo(){
   const q=id=>document.getElementById(id),ab=id=>q(id)&&q(id).classList.contains('open');
+  if(ab('enc-prod-bg')){encProdFechar();return true;}
   if(ab('fat-txt-bg')){fatTxtFechar();return true;}
   if(ab('fat-crop-bg')){fatCropFechar();return true;}
   if(ab('fat-tap-bg')){fatFecharTap();return true;}
@@ -3393,6 +3433,78 @@ window.addEventListener('popstate',function(){
   else history.pushState({pc:1},'');
 });
 window.addEventListener('beforeunload',function(e){if(_sairOk)return;e.preventDefault();e.returnValue='';});
+
+
+// ══ JANELAS NO TOPO: acompanham a área visível (teclado) e abrem sempre no início ══
+(function(){
+  const vv=window.visualViewport;
+  const aj=()=>document.documentElement.style.setProperty('--vvh',(vv?vv.height:window.innerHeight)+'px');
+  aj();if(vv)vv.addEventListener('resize',aj);window.addEventListener('resize',aj);
+  const topo=el=>{const c=el.querySelector('.modal-card');if(c)c.scrollTop=0;window.scrollTo(0,0);};
+  const obs=new MutationObserver(ms=>ms.forEach(m=>{
+    const el=m.target;
+    if(el.classList&&el.classList.contains('modal-bg')&&el.classList.contains('open')){topo(el);setTimeout(()=>topo(el),60);setTimeout(()=>topo(el),250);}
+  }));
+  document.querySelectorAll('.modal-bg').forEach(el=>obs.observe(el,{attributes:true,attributeFilter:['class']}));
+})();
+
+// ══ ENCOMENDAS: escolher produtos da base com + e − (encomenda direta) ══
+let ENCP={list:[],lim:100};
+function encProdItem(p){
+  if(!FORN_ATIVO)return null;
+  const cods=[p.cod,p.ean,p.f].filter(Boolean);
+  return (ENCOMENDAS[FORN_ATIVO.id]||[]).find(x=>cods.includes(x.cod))||null;
+}
+function encProdAbrir(){
+  if(!FORN_ATIVO){toast('Selecione primeiro um fornecedor','err');nav('m4');return;}
+  if(!DADOS.length){toast('Carregue primeiro o Excel de produtos','err');return;}
+  document.getElementById('encp-forn').textContent='Fornecedor: '+FORN_ATIVO.nome;
+  document.getElementById('encp-busca').value='';ENCP.lim=100;
+  document.getElementById('enc-prod-bg').classList.add('open');
+  encProdRender();
+}
+function encProdFechar(){
+  document.getElementById('enc-prod-bg').classList.remove('open');
+  if(document.getElementById('m5').classList.contains('active'))renderEncomenda();
+}
+function encProdTotais(){
+  const it=FORN_ATIVO?(ENCOMENDAS[FORN_ATIVO.id]||[]):[];
+  document.getElementById('encp-tot').textContent=it.length+' artigo(s) · '+it.reduce((a,x)=>a+x.qtd,0)+' und.';
+}
+function encProdRender(){
+  const q=fatSemAcentos(document.getElementById('encp-busca').value||'').trim();
+  const lista=q?DADOS.filter(p=>fatSemAcentos(p.nome+' '+p.cod+' '+p.ean).includes(q)):DADOS.slice();
+  ENCP.list=lista;
+  const box=document.getElementById('encp-list'),vis=lista.slice(0,ENCP.lim);
+  if(!vis.length){box.innerHTML='<div class="fat-empty">Sem resultados</div>';encProdTotais();return;}
+  box.innerHTML=vis.map((p,i)=>{
+    const it=encProdItem(p),qtd=it?it.qtd:0,img=getImg(p);
+    return `<div class="encp-row ${qtd?'sel':''}" id="encp-r-${i}">
+      ${img?`<img class="encp-img" loading="lazy" src="${img}" alt="">`:'<div class="encp-img">📦</div>'}
+      <div class="encp-info"><div class="encp-nome">${String(p.nome).replace(/</g,'&lt;')}</div><div class="encp-cod">${getCod(p)}${p.un?' · '+p.un:''}</div></div>
+      <div class="encp-q"><button onclick="encProdAlt(${i},-1)">−</button><span id="encp-q-${i}">${qtd}</span><button class="mais" onclick="encProdAlt(${i},1)">+</button></div>
+    </div>`;
+  }).join('')+(lista.length>vis.length?`<button class="fadd" style="margin:6px 0;width:100%" onclick="ENCP.lim+=100;encProdRender()">Mostrar mais (${lista.length-vis.length})…</button>`:'');
+  encProdTotais();
+}
+function encProdAlt(i,d){
+  const p=ENCP.list[i];if(!p||!FORN_ATIVO)return;
+  const fid=FORN_ATIVO.id;if(!ENCOMENDAS[fid])ENCOMENDAS[fid]=[];
+  let it=encProdItem(p);
+  if(!it){
+    if(d<0)return;
+    ENCOMENDAS[fid].push({cod:getCod(p),nome:p.nome,un:p.un||'',preco:p.preco||0,qtd:1,imgUrl:getImg(p)});
+  }else{
+    it.qtd+=d;
+    if(it.qtd<=0)ENCOMENDAS[fid]=ENCOMENDAS[fid].filter(x=>x!==it);
+  }
+  salvarEncomendas();atualizarEncBadge();
+  it=encProdItem(p);
+  const sp=document.getElementById('encp-q-'+i),row=document.getElementById('encp-r-'+i);
+  if(sp)sp.textContent=it?it.qtd:0;
+  if(row)row.classList.toggle('sel',!!it);
+  encProdTotais();
+}
 
 // ══ INIT ══
 (async()=>{
