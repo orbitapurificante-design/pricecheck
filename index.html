@@ -463,6 +463,22 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
 
 .sx-btn{position:absolute;display:none;align-items:center;justify-content:center;width:26px;height:26px;border:none;border-radius:50%;background:#94a3b8;color:#fff;font-size:13px;font-weight:800;cursor:pointer;z-index:6;padding:0;line-height:1;}
 .enc-un{display:inline-block;border:none;border-radius:10px;padding:2px 10px;margin-left:6px;font-size:11px;font-weight:800;background:var(--a);color:#1a2340;cursor:pointer;font-family:'Inter',sans-serif;}
+
+#enc-scan-modal input,#enc-scan-modal select{min-width:0 !important;}
+#enc-scan-modal button{flex-shrink:0;}
+#enc-scan-modal #enc-scan-input{width:0;flex:1 1 0 !important;padding:10px 8px !important;}
+/* encomendas: cartões compactos, nome na horizontal (igual à lista de escolha de produtos) */
+.enc-item{background:#fff !important;border:1px solid #dde2ea !important;border-radius:12px !important;margin-bottom:7px !important;}
+.enc-item-row{padding:8px 10px !important;gap:8px !important;}
+.enc-item-img,.enc-item-img-e{width:42px !important;height:42px !important;background:#eef1f6 !important;border-color:#dde2ea !important;}
+.enc-item-nome{white-space:normal !important;text-overflow:clip !important;color:#1a2340 !important;font-weight:700 !important;line-height:1.25;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden !important;}
+.enc-item-cod{color:#1a2340 !important;opacity:.85;font-weight:600;display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:3px;}
+.enc-item-cod .enc-un{margin-left:0;}
+.enc-item-qtd-wrap{gap:4px !important;}
+.enc-qtd-btn{width:32px !important;height:32px !important;border-radius:50% !important;background:#e2e8f0 !important;color:#1a2340 !important;}
+.enc-qtd-btn:last-child{background:var(--a) !important;}
+.enc-qtd-inp{width:40px !important;padding:4px 2px !important;color:#1a2340 !important;background:#fff !important;font-size:15px !important;}
+.enc-item-del{padding:1px 8px !important;font-size:13px !important;background:rgba(239,68,68,.12) !important;border-radius:6px !important;margin-left:auto;}
 </style>
 </head>
 <body>
@@ -547,7 +563,9 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
     <div style="font-size:17px;font-weight:700;margin-bottom:4px;text-align:center">☁️ Sincronização GitHub</div>
     <div style="font-size:12px;color:var(--muted);margin-bottom:16px;text-align:center">Os preços ficam guardados no teu repositório e atualizam-se sozinhos quando há net</div>
     <div style="font-size:10px;color:var(--a);text-transform:uppercase;letter-spacing:0.5px;font-weight:700;margin-bottom:6px;">URL do Proxy (servidor que grava)</div>
-    <input type="text" id="git-proxy" placeholder="https://o-teu-proxy.onrender.com/save-xlsx" style="width:100%;background:var(--s2);border:1.5px solid var(--bd);border-radius:8px;padding:12px;color:var(--text);font-size:13px;font-family:'JetBrains Mono',monospace;outline:none;margin-bottom:10px;">
+    <div style="font-size:10px;color:var(--a);text-transform:uppercase;letter-spacing:0.5px;font-weight:700;margin-bottom:6px;">Token GitHub (alternativa ao proxy — recomendado)</div>
+  <input type="password" id="git-token" placeholder="github_pat_... (permissão Contents: Read and write)" style="width:100%;background:var(--s2);border:1.5px solid var(--bd);border-radius:8px;padding:12px;color:var(--text);font-size:13px;font-family:'JetBrains Mono',monospace;outline:none;margin-bottom:12px;">
+  <input type="text" id="git-proxy" placeholder="https://o-teu-proxy.onrender.com/save-xlsx" style="width:100%;background:var(--s2);border:1.5px solid var(--bd);border-radius:8px;padding:12px;color:var(--text);font-size:13px;font-family:'JetBrains Mono',monospace;outline:none;margin-bottom:10px;">
     <div style="display:flex;gap:8px;margin-bottom:10px;">
       <div style="flex:1;">
         <div style="font-size:10px;color:var(--a);text-transform:uppercase;letter-spacing:0.5px;font-weight:700;margin-bottom:6px;">Owner</div>
@@ -765,7 +783,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
     <div class="enc-scan-last" id="enc-scan-last">Aponte para o código de barras</div>
   </div>
   <div id="enc-scan-flash" style="position:absolute;inset:0;background:rgba(16,185,129,0.25);opacity:0;pointer-events:none;transition:opacity 0.15s;"></div>
-  <div style="padding:12px 16px 20px;background:#1a2340;border-top:1px solid rgba(201,168,76,0.2);">
+  <div style="padding:12px 16px calc(20px + env(safe-area-inset-bottom,0px));background:#1a2340;border-top:1px solid rgba(201,168,76,0.2);box-sizing:border-box;width:100%;">
     <div id="enc-scan-status" style="text-align:center;font-size:12px;min-height:18px;margin-bottom:8px;font-weight:500;color:#7a8fba;"></div>
     <div style="display:flex;gap:8px;margin-bottom:8px;">
       <select id="enc-scan-sel" style="flex:1;background:#1e2a4a;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:9px 12px;color:#f1f5f9;font-size:12px;font-family:Inter,sans-serif;outline:none;" onchange="encTrocarCamera()"><option>A iniciar...</option></select>
@@ -978,6 +996,7 @@ function atualizarGitStatus(){
 
 function abrirConfigGit(){
   document.getElementById('git-proxy').value=GIT_CFG.proxy;
+  document.getElementById('git-token').value=GIT_CFG.token||'';
   document.getElementById('git-owner').value=GIT_CFG.owner;
   document.getElementById('git-repo').value=GIT_CFG.repo;
   document.getElementById('git-path').value=GIT_CFG.path;
@@ -990,6 +1009,7 @@ function fecharConfigGit(){document.getElementById('git-modal-bg').classList.rem
 function guardarConfigGit(){
   GIT_CFG={
     proxy:document.getElementById('git-proxy').value.trim(),
+    token:document.getElementById('git-token').value.trim(),
     owner:document.getElementById('git-owner').value.trim(),
     repo:document.getElementById('git-repo').value.trim(),
     path:document.getElementById('git-path').value.trim(),
@@ -1037,7 +1057,7 @@ function importarPayloadJSON(jsonStr, silencioso){
 }
 
 async function enviarParaGitHub(silencioso){
-  if(!GIT_CFG.proxy||!GIT_CFG.owner||!GIT_CFG.repo||!GIT_CFG.path){
+  if((!GIT_CFG.proxy&&!GIT_CFG.token)||!GIT_CFG.owner||!GIT_CFG.repo||!GIT_CFG.path){
     if(!silencioso){toast('Configura o GitHub primeiro','err');abrirConfigGit();}
     return false;
   }
@@ -1048,13 +1068,25 @@ async function enviarParaGitHub(silencioso){
   try{
     const payload=gerarPayloadJSON();
     const base64=btoa(unescape(encodeURIComponent(payload)));
-    const resp=await fetch(GIT_CFG.proxy,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({owner:GIT_CFG.owner,repo:GIT_CFG.repo,path:GIT_CFG.path,branch:GIT_CFG.branch,contentBase64:base64,message:'PriceCheck — atualização automática de preços'})
-    });
-    const json=await resp.json();
-    if(!resp.ok)throw new Error((json&&(json.error&&json.error.message||json.error))||'Falha ao gravar');
+    if(GIT_CFG.token){   // gravação direta na API do GitHub
+      const api='https://api.github.com/repos/'+GIT_CFG.owner+'/'+GIT_CFG.repo+'/contents/'+GIT_CFG.path.split('/').map(encodeURIComponent).join('/');
+      const H={'Authorization':'Bearer '+GIT_CFG.token,'Accept':'application/vnd.github+json'};
+      let sha;
+      const g=await fetch(api+'?ref='+encodeURIComponent(GIT_CFG.branch||'main')+'&t='+Date.now(),{headers:H,cache:'no-store'});
+      if(g.ok)sha=(await g.json()).sha;else if(g.status!==404)throw new Error('GitHub '+g.status+(g.status===401?' (token inválido)':''));
+      const r=await fetch(api,{method:'PUT',headers:Object.assign({'Content-Type':'application/json'},H),
+        body:JSON.stringify({message:'PriceCheck - atualização automática de preços',content:base64,branch:GIT_CFG.branch||'main',sha})});
+      const j=await r.json();
+      if(!r.ok)throw new Error(j.message||'Falha ao gravar');
+    }else{
+      const resp=await fetch(GIT_CFG.proxy,{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({owner:GIT_CFG.owner,repo:GIT_CFG.repo,path:GIT_CFG.path,branch:GIT_CFG.branch,contentBase64:base64,message:'PriceCheck - atualização automática de preços'})
+      });
+      const json=await resp.json();
+      if(!resp.ok)throw new Error((json&&(json.error&&json.error.message||json.error))||'Falha ao gravar');
+    }
     gitSyncPendente=false;
     localStorage.setItem('PC_GIT_PENDENTE','0');
     atualizarGitStatus();
@@ -1076,7 +1108,7 @@ async function atualizarDoGitHub(silencioso){
     return false;
   }
   try{
-    if(gitSyncPendente&&GIT_CFG.proxy){
+    if(gitSyncPendente&&(GIT_CFG.proxy||GIT_CFG.token)){
       // há alterações locais (editar/apagar) por enviar: enviar primeiro, senão o merge traria de volta o que apagou
       const ok=await enviarParaGitHub(true);
       if(!silencioso)toast(ok?'✓ Alterações enviadas para o GitHub':'Alterações locais por enviar (sem ligação)',ok?'ok':'err');
@@ -1986,14 +2018,13 @@ function renderEncomenda(){
         ${imgHtml}
         <div class="enc-item-info">
           <div class="enc-item-nome">${item.nome}</div>
-          <div class="enc-item-cod">${item.cod}<button class="enc-un" onclick="encToggleUn(${idx})" title="Mudar CX / UNI">${item.un||'CX'}</button></div>
+          <div class="enc-item-cod">${item.cod}<button class="enc-un" onclick="encToggleUn(${idx})" title="Mudar CX / UNI">${item.un||'CX'}</button><button class="enc-item-del" onclick="encApagarItem(${idx})" title="Remover">✕</button></div>
         </div>
         <div class="enc-item-qtd-wrap">
           <button class="enc-qtd-btn" onclick="encAlterarQtd(${idx},-1)">−</button>
           <input class="enc-qtd-inp" type="number" min="1" value="${item.qtd}" onchange="encSetQtd(${idx},this.value)" onclick="this.select()">
           <button class="enc-qtd-btn" onclick="encAlterarQtd(${idx},1)">+</button>
         </div>
-        <button class="enc-item-del" onclick="encApagarItem(${idx})" title="Remover">✕</button>
       </div>
     </div>`;
   });
@@ -3585,6 +3616,10 @@ if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.s
   window.addEventListener('resize',()=>document.querySelectorAll('input').forEach(i=>{if(i._xb)posicionar(i);}));
   setInterval(()=>document.querySelectorAll('input').forEach(i=>{if(i._xb&&!i.value)i._xb.style.display='none';}),400);
 })();
+
+// offline → online: reenvia sozinho o que ficou por sincronizar
+setInterval(()=>{if(navigator.onLine&&gitSyncPendente&&(GIT_CFG.proxy||GIT_CFG.token))enviarParaGitHub(true);},60000);
+try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();}catch(e){}
 
 // ══ INIT ══
 (async()=>{
