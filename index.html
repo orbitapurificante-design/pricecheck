@@ -950,6 +950,11 @@ let _gitPushTimer=null;
 
 function carregarConfigGit(){
   try{const d=localStorage.getItem(GIT_CFG_KEY);if(d)GIT_CFG=Object.assign({},GIT_CFG,JSON.parse(d));}catch(e){}
+  if(GIT_CFG.owner&&GIT_CFG.repo){   // campos vazios → endereço calculado a partir de owner/repo/branch
+    const base='https://raw.githubusercontent.com/'+GIT_CFG.owner+'/'+GIT_CFG.repo+'/'+(GIT_CFG.branch||'main')+'/';
+    if(!GIT_CFG.produtosRawUrl)GIT_CFG.produtosRawUrl=base+'produtos.xlsx';
+    if(!GIT_CFG.rawUrl&&GIT_CFG.path)GIT_CFG.rawUrl=base+GIT_CFG.path;
+  }
   try{gitSyncPendente=localStorage.getItem('PC_GIT_PENDENTE')==='1';}catch(e){}
 }
 function guardarConfigGitState(){localStorage.setItem(GIT_CFG_KEY,JSON.stringify(GIT_CFG));}
@@ -1158,18 +1163,33 @@ async function atualizarProdutosDoGitHub(silencioso){
     return false;
   }
   try{
-    const resp=await fetch(GIT_CFG.produtosRawUrl+'?t='+Date.now());
-    if(!resp.ok)throw new Error('Ficheiro de produtos não encontrado no GitHub (verifica o URL)');
-    const buf=await resp.arrayBuffer();
-    const wb=XLSX.read(new Uint8Array(buf),{type:'array'});
-    processarWorkbookProdutos(wb, true);
-    if(!silencioso)toast('✓ '+DADOS.length+' produtos atualizados do GitHub','ok');
+    const resp=await fetch(GIT_CFG.produtosRawUrl+'?t='+Date.now(),{cache:'no-store'});
+    if(!resp.ok)throw new Error(resp.status===404?'produtos.xlsx não encontrado no GitHub (nome/pasta/branch ou repositório privado)':('erro '+resp.status));
+    const buf=new Uint8Array(await resp.arrayBuffer());
+    let h=2166136261;for(let i=0;i<buf.length;i++){h^=buf[i];h=Math.imul(h,16777619)>>>0;}
+    const assinatura=buf.length+':'+h;
+    if(localStorage.getItem('PC_PROD_HASH')===assinatura&&DADOS.length){
+      if(!silencioso)toast('✓ Produtos já estão atualizados ('+DADOS.length+')','ok');
+      return true;
+    }
+    const wb=XLSX.read(buf,{type:'array'});
+    processarWorkbookProdutos(wb,true);
+    localStorage.setItem('PC_PROD_HASH',assinatura);
+    toast('✓ '+DADOS.length+' produtos atualizados do GitHub','ok');
     return true;
   }catch(err){
-    if(!silencioso)toast('Erro ao atualizar produtos: '+err.message,'err');
+    if(!silencioso||!window._prodErrMostrado){toast('Produtos do GitHub: '+err.message,'err');window._prodErrMostrado=true;}
     return false;
   }
 }
+// quando a app volta ao ecrã (PWA em segundo plano) volta a verificar atualizações
+let _ultVerif=0;
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState!=='visible')return;
+  const agora=Date.now();if(agora-_ultVerif<120000)return;_ultVerif=agora;
+  if(GIT_CFG.produtosRawUrl)atualizarProdutosDoGitHub(true);
+  if(GIT_CFG.rawUrl)atualizarDoGitHub(true);
+});
 
 document.getElementById('f-fotos').onchange=async function(e){
   const files=Array.from(e.target.files);if(!files.length)return;
