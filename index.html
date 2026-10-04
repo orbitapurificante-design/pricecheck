@@ -7,6 +7,10 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#1a2340">
+<meta name="apple-mobile-web-app-title" content="PriceCheck">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
@@ -456,6 +460,9 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
 .encp-foot{padding:10px 14px;background:#fff;border-top:1px solid #dde2ea;display:flex;align-items:center;justify-content:space-between;gap:10px;}
 .encp-foot b{color:#1a2340;font-size:13px;}
 .encp-foot button{border:none;border-radius:10px;padding:11px 16px;font-weight:800;font-size:13px;cursor:pointer;background:var(--a);color:#1a2340;}
+
+.sx-btn{position:absolute;display:none;align-items:center;justify-content:center;width:26px;height:26px;border:none;border-radius:50%;background:#94a3b8;color:#fff;font-size:13px;font-weight:800;cursor:pointer;z-index:6;padding:0;line-height:1;}
+.enc-un{display:inline-block;border:none;border-radius:10px;padding:2px 10px;margin-left:6px;font-size:11px;font-weight:800;background:var(--a);color:#1a2340;cursor:pointer;font-family:'Inter',sans-serif;}
 </style>
 </head>
 <body>
@@ -711,12 +718,9 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
 
 <!-- ENCOMENDAS -->
 <div class="screen" id="m5">
-  <div class="enc-top">
-    <div>
-      <div class="enc-title">📦 Encomendas</div>
-      <div class="enc-sub" id="enc-sub">Leituras para o fornecedor ativo</div>
-    </div>
-    <div style="display:flex;gap:8px"><button class="enc-scan-btn" style="background:#fff;color:#1a2340;border:1.5px solid var(--a);padding:12px 12px" onclick="encProdAbrir()">📦 PRODUTOS</button><button class="enc-scan-btn" onclick="abrirEncScanner()">
+  <div class="enc-top" style="display:block !important;text-align:center">
+    <div style="text-align:center"><div class="enc-title" style="text-align:center">📦 Encomendas</div><div class="enc-sub" style="text-align:center" id="enc-sub">Leituras para o fornecedor ativo</div></div>
+    <div style="display:flex;justify-content:space-between;gap:10px;margin-top:12px"><button class="enc-scan-btn" style="flex:1;justify-content:center;background:#fff;color:#1a2340;border:1.5px solid var(--a);padding:12px 12px" onclick="encProdAbrir()">📦 PRODUTOS</button><button class="enc-scan-btn" style="flex:1;justify-content:center" onclick="abrirEncScanner()">
       <span style="font-size:17px">📷</span> SCAN
     </button></div>
   </div>
@@ -1962,7 +1966,7 @@ function renderEncomenda(){
         ${imgHtml}
         <div class="enc-item-info">
           <div class="enc-item-nome">${item.nome}</div>
-          <div class="enc-item-cod">${item.cod}${item.un?' · '+item.un:''}</div>
+          <div class="enc-item-cod">${item.cod}<button class="enc-un" onclick="encToggleUn(${idx})" title="Mudar CX / UNI">${item.un||'CX'}</button></div>
         </div>
         <div class="enc-item-qtd-wrap">
           <button class="enc-qtd-btn" onclick="encAlterarQtd(${idx},-1)">−</button>
@@ -1995,6 +1999,15 @@ function renderEncomenda(){
   wrap.innerHTML=html;
 }
 
+function encToggleUn(idx){
+  if(!FORN_ATIVO)return;const it=(ENCOMENDAS[FORN_ATIVO.id]||[])[idx];if(!it)return;
+  it.un=(it.un==='UNI')?'CX':'UNI';salvarEncomendas();renderEncomenda();
+}
+function encProdUn(i){
+  const p=ENCP.list[i],it=p&&encProdItem(p);if(!it)return;
+  it.un=(it.un==='UNI')?'CX':'UNI';salvarEncomendas();
+  const e=document.getElementById('encp-u-'+i);if(e)e.textContent=it.un;
+}
 function encAdicionarCodigo(codigo){
   if(!FORN_ATIVO){toast('Selecione um fornecedor primeiro','err');return;}
   const fid=FORN_ATIVO.id;
@@ -2013,7 +2026,7 @@ function encAdicionarCodigo(codigo){
   // Procurar produto
   const prod=findProd(codigo);
   const nome=prod?prod.nome:('Cód. '+codigo);
-  const un=prod?prod.un:'';
+  const un='CX';   // por defeito caixa; pode mudar para UNI
   const preco=prod?prod.preco:0;
   const imgUrl=prod?getImg(prod):'';
   items.push({cod:codigo,nome,un,preco,qtd:1,imgUrl});
@@ -3499,7 +3512,7 @@ function encProdRender(){
     const it=encProdItem(p),qtd=it?it.qtd:0,img=getImg(p);
     return `<div class="encp-row ${qtd?'sel':''}" id="encp-r-${i}">
       ${img?`<img class="encp-img" loading="lazy" src="${img}" alt="">`:'<div class="encp-img">📦</div>'}
-      <div class="encp-info"><div class="encp-nome">${String(p.nome).replace(/</g,'&lt;')}</div><div class="encp-cod">${getCod(p)}${p.un?' · '+p.un:''}</div></div>
+      <div class="encp-info"><div class="encp-nome">${String(p.nome).replace(/</g,'&lt;')}</div><div class="encp-cod">${getCod(p)}<button class="enc-un" id="encp-u-${i}" onclick="encProdUn(${i})" style="display:${qtd?'inline-block':'none'}">${it?(it.un||'CX'):'CX'}</button></div></div>
       <div class="encp-q"><button onclick="encProdAlt(${i},-1)">−</button><span id="encp-q-${i}">${qtd}</span><button class="mais" onclick="encProdAlt(${i},1)">+</button></div>
     </div>`;
   }).join('')+(lista.length>vis.length?`<button class="fadd" style="margin:6px 0;width:100%" onclick="ENCP.lim+=100;encProdRender()">Mostrar mais (${lista.length-vis.length})…</button>`:'');
@@ -3511,7 +3524,7 @@ function encProdAlt(i,d){
   let it=encProdItem(p);
   if(!it){
     if(d<0)return;
-    ENCOMENDAS[fid].push({cod:getCod(p),nome:p.nome,un:p.un||'',preco:p.preco||0,qtd:1,imgUrl:getImg(p)});
+    ENCOMENDAS[fid].push({cod:getCod(p),nome:p.nome,un:'CX',preco:p.preco||0,qtd:1,imgUrl:getImg(p)});
   }else{
     it.qtd+=d;
     if(it.qtd<=0)ENCOMENDAS[fid]=ENCOMENDAS[fid].filter(x=>x!==it);
@@ -3521,8 +3534,37 @@ function encProdAlt(i,d){
   const sp=document.getElementById('encp-q-'+i),row=document.getElementById('encp-r-'+i);
   if(sp)sp.textContent=it?it.qtd:0;
   if(row)row.classList.toggle('sel',!!it);
+  const ub=document.getElementById('encp-u-'+i);if(ub){ub.style.display=it?'inline-block':'none';ub.textContent=it?(it.un||'CX'):'CX';}
   encProdTotais();
 }
+
+if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(e=>console.warn('SW',e));});}
+
+
+// ══ ✕ para limpar o texto nas caixas de pesquisa ══
+(function(){
+  const ehBusca=el=>el&&el.tagName==='INPUT'&&/esquis/i.test(el.placeholder||'');
+  function posicionar(inp){
+    let b=inp._xb;
+    if(b&&!b.isConnected){b=null;inp._xb=null;}
+    if(!b){
+      b=document.createElement('button');b.type='button';b.className='sx-btn';b.textContent='✕';b.setAttribute('aria-label','Limpar pesquisa');
+      b.addEventListener('pointerdown',e=>e.preventDefault());
+      b.addEventListener('click',()=>{inp.value='';inp.dispatchEvent(new Event('input',{bubbles:true}));b.style.display='none';inp.focus();});
+      const op=inp.offsetParent||inp.parentElement;
+      if(getComputedStyle(op).position==='static')op.style.position='relative';
+      op.appendChild(b);inp._xb=b;inp.style.paddingRight='42px';
+    }
+    if(!inp.value){b.style.display='none';return;}
+    b.style.display='flex';
+    b.style.left=(inp.offsetLeft+inp.offsetWidth-34)+'px';
+    b.style.top=(inp.offsetTop+(inp.offsetHeight-26)/2)+'px';
+  }
+  document.addEventListener('input',e=>{if(ehBusca(e.target))posicionar(e.target);},true);
+  document.addEventListener('focusin',e=>{if(ehBusca(e.target))posicionar(e.target);});
+  window.addEventListener('resize',()=>document.querySelectorAll('input').forEach(i=>{if(i._xb)posicionar(i);}));
+  setInterval(()=>document.querySelectorAll('input').forEach(i=>{if(i._xb&&!i.value)i._xb.style.display='none';}),400);
+})();
 
 // ══ INIT ══
 (async()=>{
