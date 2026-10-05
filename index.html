@@ -479,6 +479,17 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
 .enc-qtd-btn:last-child{background:var(--a) !important;}
 .enc-qtd-inp{width:40px !important;padding:4px 2px !important;color:#1a2340 !important;background:#fff !important;font-size:15px !important;}
 .enc-item-del{padding:1px 8px !important;font-size:13px !important;background:rgba(239,68,68,.12) !important;border-radius:6px !important;margin-left:auto;}
+
+.enc-modo{display:flex;gap:6px;justify-content:center;margin-top:8px;}
+.enc-modo button{border:1.5px solid var(--a);background:#fff;color:#1a2340;border-radius:16px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;}
+.enc-modo button.on{background:var(--a);}
+.encm-forn{display:flex;align-items:center;justify-content:space-between;background:#1a2340;color:#fff;border-radius:10px;padding:9px 12px;margin:14px 0 6px;font-weight:800;font-size:14px;}
+.encm-forn b{color:var(--a);font-family:'JetBrains Mono',monospace;font-size:13px;}
+.encm-fam{background:#e2e8f0;color:#1a2340;border-radius:6px;padding:4px 10px;margin:8px 0 5px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;}
+.enc-pr{color:#a4122f;font-weight:800;font-size:12px;font-family:'JetBrains Mono',monospace;}
+.enc-pr.sem{color:#64748b;font-weight:600;font-family:'Inter',sans-serif;}
+.fi-promo{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;margin-top:5px;cursor:pointer;}
+.fi-promo input{width:17px;height:17px;accent-color:#a4122f;}
 </style>
 </head>
 <body>
@@ -495,7 +506,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
     <span class="hdate" id="hdate"></span>
   </div>
   <div class="hrow2">
-    <div class="hforn sem" id="hforn" onclick="nav('m4')">
+    <div class="hforn sem" id="hforn" onclick="irParaFornecedores()">
       <div class="hforn-dot"></div>
       <span class="hforn-nome" id="hforn-nome">Selecionar fornecedor</span>
       <span style="font-size:9px;opacity:0.4">▼</span>
@@ -738,6 +749,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
 <div class="screen" id="m5">
   <div class="enc-top" style="display:block !important;text-align:center">
     <div style="text-align:center"><div class="enc-title" style="text-align:center">📦 Encomendas</div><div class="enc-sub" style="text-align:center" id="enc-sub">Leituras para o fornecedor ativo</div></div>
+    <div class="enc-modo"><button id="enc-modo-forn" onclick="encSetModo('forn')">Fornecedor</button><button id="enc-modo-melhor" onclick="encSetModo('melhor')">⭐ Melhor fornecedor</button></div>
     <div style="display:flex;justify-content:space-between;gap:10px;margin-top:12px"><button class="enc-scan-btn" style="flex:1;justify-content:center;background:#fff;color:#1a2340;border:1.5px solid var(--a);padding:12px 12px" onclick="encProdAbrir()">📦 PRODUTOS</button><button class="enc-scan-btn" style="flex:1;justify-content:center" onclick="abrirEncScanner()">
       <span style="font-size:17px">📷</span> SCAN
     </button></div>
@@ -1137,6 +1149,7 @@ window.addEventListener('offline',atualizarGitStatus);
 var NAV_STACK=[],NAV_NOPUSH=false;
 function nav(id){
   const _atual=(document.querySelector('.screen.active')||{}).id;
+  if(id!=='m4')window._origemForn=null;
   if(!NAV_NOPUSH&&_atual&&_atual!==id){NAV_STACK.push(_atual);if(NAV_STACK.length>20)NAV_STACK.shift();}
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.bnav-btn').forEach(b=>b.classList.remove('active'));
@@ -1765,7 +1778,7 @@ function renderFornecedores(){
     const nr=Object.values(PRECOS_DB).reduce((a,pf)=>a+(pf[f.id]?.length||0),0);
     return`<div class="fitem${at?' ativo':''}" onclick="selecionarFornecedor(${f.id})">
       <div class="fava" title="Ver lista deste fornecedor" onclick="event.stopPropagation();abrirFornRelatorio(${f.id})">${fornLogo(f.id)?`<img src="${fornLogo(f.id)}" alt="">`:'🏭'}</div>
-      <div class="ficol"><div class="finome">${f.nome}</div><div class="fistats">${np} produto(s) · ${nr} registo(s)</div></div>
+      <div class="ficol"><div class="finome">${f.nome}</div><div class="fistats">${np} produto(s) · ${nr} registo(s)</div><label class="fi-promo" onclick="event.stopPropagation()"><input type="checkbox" ${f.promo?'checked':''} onchange="togglePromo(${f.id},this.checked)"> 🏷️ Preço promoção (15 dias)</label></div>
       <div class="fiacts">
         ${at?'<span class="fi-ativo-b">ATIVO</span>':''}
         <button class="fi-lista" onclick="event.stopPropagation();abrirFornRelatorio(${f.id})">📋 Lista</button>
@@ -1779,6 +1792,18 @@ function selecionarFornecedor(id){
   FORN_ATIVO=FORN_ATIVO&&String(FORN_ATIVO.id)===String(id)?null:f||null;
   salvarFornAtivo();atualizarHeaderForn();renderFornecedores();
   toast(FORN_ATIVO?'✓ '+FORN_ATIVO.nome+' selecionado':'Fornecedor desmarcado','ok');
+  if(FORN_ATIVO&&window._origemForn){   // volta ao ecrã onde estava (ex.: Produtos)
+    const o=window._origemForn;window._origemForn=null;NAV_STACK.pop();NAV_NOPUSH=true;nav(o);NAV_NOPUSH=false;
+  }
+}
+function irParaFornecedores(){
+  const at=(document.querySelector('.screen.active')||{}).id;
+  window._origemForn=(at&&at!=='m4')?at:null;nav('m4');
+}
+function togglePromo(id,v){
+  const f=FORNECEDORES.find(x=>String(x.id)===String(id));if(!f)return;
+  f.promo=!!v;salvarForn();
+  toast(v?'🏷️ '+f.nome+': preços de promoção (só contam 15 dias)':f.nome+': preços normais','ok');
 }
 function atualizarHeaderForn(){
   const hf=document.getElementById('hforn'),hn=document.getElementById('hforn-nome');
@@ -1981,13 +2006,15 @@ function salvarEncomendas(){localStorage.setItem('PC_ENC',JSON.stringify(ENCOMEN
 function carregarEncomendas(){try{const d=localStorage.getItem('PC_ENC');if(d)ENCOMENDAS=JSON.parse(d);}catch(e){}}
 
 function atualizarEncHeader(){
+  const _bf=document.getElementById('enc-modo-forn'),_bm=document.getElementById('enc-modo-melhor');
+  if(_bf){_bf.classList.toggle('on',ENC_MODO!=='melhor');_bm.classList.toggle('on',ENC_MODO==='melhor');}
   const sel=document.getElementById('enc-forn-sel');
   const nome=document.getElementById('enc-forn-nome');
   const sub=document.getElementById('enc-sub');
-  if(FORN_ATIVO){
+  if(encForn()){
     sel.className='enc-forn-sel ok';
-    nome.textContent=FORN_ATIVO.nome;
-    const items=ENCOMENDAS[FORN_ATIVO.id]||[];
+    nome.textContent=encForn().nome;
+    const items=ENCOMENDAS[encForn().id]||[];
     const total=items.reduce((a,x)=>a+x.qtd,0);
     sub.textContent=items.length+' artigo(s) · '+total+' und.';
   }else{
@@ -2000,13 +2027,14 @@ function atualizarEncHeader(){
 function renderEncomenda(){
   atualizarEncHeader();
   const wrap=document.getElementById('enc-lista-wrap');
-  if(!FORN_ATIVO){
+  if(!encForn()){
     wrap.innerHTML=`<div class="enc-empty"><div class="enc-empty-ico">🏭</div><div class="enc-empty-title">Sem fornecedor ativo</div><div class="enc-empty-sub">Vá a Fornecedores e selecione um<br>para criar uma encomenda</div></div>`;return;
   }
-  const items=ENCOMENDAS[FORN_ATIVO.id]||[];
+  const items=ENCOMENDAS[encForn().id]||[];
   if(!items.length){
     wrap.innerHTML=`<div class="enc-empty"><div class="enc-empty-ico">📋</div><div class="enc-empty-title">Encomenda vazia</div><div class="enc-empty-sub">Pressione SCAN para começar<br>a ler artigos para a encomenda</div></div>`;return;
   }
+  if(ENC_MODO==='melhor'){renderEncomendaMelhor(wrap,items);return;}
   const totalUnd=items.reduce((a,x)=>a+x.qtd,0);
   const totalVal=items.reduce((a,x)=>a+(x.preco||0)*x.qtd,0);
   let html=`<div class="enc-list">`;
@@ -2051,7 +2079,7 @@ function renderEncomenda(){
 }
 
 function encToggleUn(idx){
-  if(!FORN_ATIVO)return;const it=(ENCOMENDAS[FORN_ATIVO.id]||[])[idx];if(!it)return;
+  if(!encForn())return;const it=(ENCOMENDAS[encForn().id]||[])[idx];if(!it)return;
   it.un=(it.un==='UNI')?'CX':'UNI';salvarEncomendas();renderEncomenda();
 }
 function encProdUn(i){
@@ -2060,8 +2088,8 @@ function encProdUn(i){
   const e=document.getElementById('encp-u-'+i);if(e)e.textContent=it.un;
 }
 function encAdicionarCodigo(codigo){
-  if(!FORN_ATIVO){toast('Selecione um fornecedor primeiro','err');return;}
-  const fid=FORN_ATIVO.id;
+  if(!encForn()){toast('Selecione um fornecedor primeiro','err');return;}
+  const fid=encForn().id;
   if(!ENCOMENDAS[fid])ENCOMENDAS[fid]=[];
   const items=ENCOMENDAS[fid];
   // Verificar se já existe
@@ -2090,30 +2118,30 @@ function encFlashLinha(item){/* visual feedback já vem do scanner flash */}
 
 function atualizarEncBadge(){
   const el=document.getElementById('enc-scan-count');
-  if(!el||!FORN_ATIVO)return;
-  const items=ENCOMENDAS[FORN_ATIVO.id]||[];
+  if(!el||!encForn())return;
+  const items=ENCOMENDAS[encForn().id]||[];
   const total=items.reduce((a,x)=>a+x.qtd,0);
   el.textContent=total+' und.';
 }
 
 function encAlterarQtd(idx,delta){
-  if(!FORN_ATIVO)return;
-  const items=ENCOMENDAS[FORN_ATIVO.id]||[];
+  if(!encForn())return;
+  const items=ENCOMENDAS[encForn().id]||[];
   if(!items[idx])return;
   items[idx].qtd=Math.max(1,items[idx].qtd+delta);
   salvarEncomendas();renderEncomenda();
 }
 function encSetQtd(idx,val){
-  if(!FORN_ATIVO)return;
-  const items=ENCOMENDAS[FORN_ATIVO.id]||[];
+  if(!encForn())return;
+  const items=ENCOMENDAS[encForn().id]||[];
   if(!items[idx])return;
   const v=parseInt(val)||1;
   items[idx].qtd=Math.max(1,v);
   salvarEncomendas();renderEncomenda();
 }
 function encApagarItem(idx){
-  if(!FORN_ATIVO)return;
-  const items=ENCOMENDAS[FORN_ATIVO.id]||[];
+  if(!encForn())return;
+  const items=ENCOMENDAS[encForn().id]||[];
   if(!items[idx])return;
   const nome=items[idx].nome;
   items.splice(idx,1);
@@ -2121,17 +2149,18 @@ function encApagarItem(idx){
   toast('Removido: '+nome,'ok');
 }
 function apagarEncomenda(){
-  if(!FORN_ATIVO)return;
-  if(!confirm('Apagar toda a encomenda de '+FORN_ATIVO.nome+'?'))return;
-  ENCOMENDAS[FORN_ATIVO.id]=[];
+  if(!encForn())return;
+  if(!confirm('Apagar toda a encomenda de '+encForn().nome+'?'))return;
+  ENCOMENDAS[encForn().id]=[];
   salvarEncomendas();renderEncomenda();
   toast('Encomenda limpa','ok');
 }
 
 function exportarEncomendaExcel(){
-  if(!FORN_ATIVO){toast('Selecione um fornecedor','err');return;}
-  const items=ENCOMENDAS[FORN_ATIVO.id]||[];
+  if(!encForn()){toast('Selecione um fornecedor','err');return;}
+  const items=ENCOMENDAS[encForn().id]||[];
   if(!items.length){toast('Encomenda vazia','err');return;}
+  if(ENC_MODO==='melhor'){exportarEncomendaMelhorExcel();return;}
   const hdr=['Código','Produto','Un.','Qtd.','Preço unit. €','Total €'];
   const rows=items.map(item=>[
     item.cod,
@@ -2144,15 +2173,16 @@ function exportarEncomendaExcel(){
   const ws=XLSX.utils.aoa_to_sheet([hdr,...rows]);
   ws['!cols']=[{wch:14},{wch:32},{wch:8},{wch:8},{wch:14},{wch:12}];
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Encomenda');
-  const nomeForn=(FORN_ATIVO.nome||'fornecedor').replace(/[^a-z0-9]+/gi,'_');
+  const nomeForn=(encForn().nome||'fornecedor').replace(/[^a-z0-9]+/gi,'_');
   XLSX.writeFile(wb,'PriceCheck_Encomenda_'+nomeForn+'_'+new Date().toISOString().split('T')[0]+'.xlsx');
   toast('✓ Exportado!','ok');
 }
 
 function imprimirEncomenda(){
-  if(!FORN_ATIVO)return;
-  const items=ENCOMENDAS[FORN_ATIVO.id]||[];
+  if(!encForn())return;
+  const items=ENCOMENDAS[encForn().id]||[];
   if(!items.length){toast('Encomenda vazia','err');return;}
+  if(ENC_MODO==='melhor'){imprimirEncomendaMelhor();return;}
   const d=new Date();
   const ds=d.toLocaleDateString('pt-PT')+' '+d.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'});
   const totalUnd=items.reduce((a,x)=>a+x.qtd,0);
@@ -2166,7 +2196,7 @@ function imprimirEncomenda(){
       <td style="padding:8px 10px;text-align:right;font-size:12px;color:#555">${item.preco>0?item.preco.toFixed(2)+'€':'—'}</td>
       <td style="padding:8px 10px;text-align:right;font-size:13px;font-weight:700;color:#1a2340">${item.preco>0?(item.preco*item.qtd).toFixed(2)+'€':'—'}</td>
     </tr>`).join('');
-  const html=`<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>Encomenda — ${FORN_ATIVO.nome}</title>
+  const html=`<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>Encomenda — ${encForn().nome}</title>
   <style>
     body{font-family:Arial,sans-serif;margin:0;padding:20px;color:#1a2340}
     h1{font-size:22px;margin:0 0 4px}
@@ -2179,7 +2209,7 @@ function imprimirEncomenda(){
     @media print{body{padding:10px}}
   </style></head><body>
   <div class="logo">PriceCheck · Pro</div>
-  <h1>Encomenda — ${FORN_ATIVO.nome}</h1>
+  <h1>Encomenda — ${encForn().nome}</h1>
   <div class="sub">Emitida em ${ds} · ${items.length} artigo(s) · ${totalUnd} und. total</div>
   <table>
     <thead><tr>
@@ -2201,11 +2231,11 @@ function imprimirEncomenda(){
 
 // ── SCANNER CONTÍNUO ENCOMENDAS ──
 async function abrirEncScanner(){
-  if(!FORN_ATIVO){toast('Selecione primeiro um fornecedor','err');nav('m4');return;}
+  if(!encForn()){toast('Selecione primeiro um fornecedor','err');nav('m4');return;}
   const modal=document.getElementById('enc-scan-modal');
   modal.style.display='flex';encScannerAberto=true;
   document.getElementById('enc-scan-input').value='';
-  document.getElementById('enc-scan-badge').textContent='📦 '+FORN_ATIVO.nome;
+  document.getElementById('enc-scan-badge').textContent='📦 '+encForn().nome;
   atualizarEncBadge();
   setEncStatus('A iniciar câmera...','');
   if(temBarcodeDetector()){
@@ -3533,14 +3563,14 @@ window.addEventListener('beforeunload',function(e){if(_sairOk)return;e.preventDe
 // ══ ENCOMENDAS: escolher produtos da base com + e − (encomenda direta) ══
 let ENCP={list:[],lim:100};
 function encProdItem(p){
-  if(!FORN_ATIVO)return null;
+  if(!encForn())return null;
   const cods=[p.cod,p.ean,p.f].filter(codValido);
-  return (ENCOMENDAS[FORN_ATIVO.id]||[]).find(x=>cods.includes(x.cod))||null;
+  return (ENCOMENDAS[encForn().id]||[]).find(x=>cods.includes(x.cod))||null;
 }
 function encProdAbrir(){
-  if(!FORN_ATIVO){toast('Selecione primeiro um fornecedor','err');nav('m4');return;}
+  if(!encForn()){toast('Selecione primeiro um fornecedor','err');nav('m4');return;}
   if(!DADOS.length){toast('Carregue primeiro o Excel de produtos','err');return;}
-  document.getElementById('encp-forn').textContent='Fornecedor: '+FORN_ATIVO.nome;
+  document.getElementById('encp-forn').textContent='Fornecedor: '+encForn().nome;
   document.getElementById('encp-busca').value='';ENCP.lim=100;
   document.getElementById('enc-prod-bg').classList.add('open');
   encProdRender();
@@ -3550,7 +3580,7 @@ function encProdFechar(){
   if(document.getElementById('m5').classList.contains('active'))renderEncomenda();
 }
 function encProdTotais(){
-  const it=FORN_ATIVO?(ENCOMENDAS[FORN_ATIVO.id]||[]):[];
+  const it=encForn()?(ENCOMENDAS[encForn().id]||[]):[];
   document.getElementById('encp-tot').textContent=it.length+' artigo(s) · '+it.reduce((a,x)=>a+x.qtd,0)+' und.';
 }
 function encProdRender(){
@@ -3570,8 +3600,8 @@ function encProdRender(){
   encProdTotais();
 }
 function encProdAlt(i,d){
-  const p=ENCP.list[i];if(!p||!FORN_ATIVO)return;
-  const fid=FORN_ATIVO.id;if(!ENCOMENDAS[fid])ENCOMENDAS[fid]=[];
+  const p=ENCP.list[i];if(!p||!encForn())return;
+  const fid=encForn().id;if(!ENCOMENDAS[fid])ENCOMENDAS[fid]=[];
   let it=encProdItem(p);
   if(!it){
     if(d<0)return;
@@ -3620,6 +3650,124 @@ if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.s
 // offline → online: reenvia sozinho o que ficou por sincronizar
 setInterval(()=>{if(navigator.onLine&&gitSyncPendente&&(GIT_CFG.proxy||GIT_CFG.token))enviarParaGitHub(true);},60000);
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();}catch(e){}
+
+
+// ══ ENCOMENDAS: MELHOR FORNECEDOR (preço mais baixo registado, agrupado por fornecedor → família) ══
+var ENC_MODO='forn';try{ENC_MODO=localStorage.getItem('PC_ENC_MODO')||'forn';}catch(e){}
+var MELHOR={id:'melhor',nome:'⭐ Melhor Fornecedor'};
+function encForn(){return ENC_MODO==='melhor'?MELHOR:FORN_ATIVO;}
+function encSetModo(m){
+  ENC_MODO=m;try{localStorage.setItem('PC_ENC_MODO',m);}catch(e){}
+  renderEncomenda();atualizarEncBadge();
+}
+const escH=t=>String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+function dataParaDate(str){const m=String(str||'').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);return m?new Date(+m[3],+m[2]-1,+m[1]):null;}
+// último preço registado de cada fornecedor para este produto
+function precosDoProduto(prod,codItem){
+  const keys=[...new Set([codItem,prod&&getCod(prod),prod&&prod.cod,prod&&prod.ean,prod&&prod.f].filter(k=>k&&codValido(k)))];
+  const porForn={};
+  keys.forEach(k=>{
+    const o=PRECOS_DB[k]||{};
+    Object.keys(o).forEach(fid=>{
+      const h=o[fid];if(!h||!h.length)return;
+      const ul=h[h.length-1],d=dataParaDate(ul.data),cur=porForn[fid];
+      if(!cur||!cur.d||(d&&d>cur.d))porForn[fid]={preco:parseFloat(ul.preco),data:ul.data,d};
+    });
+  });
+  return porForn;
+}
+function melhorFornecedor(prod,codItem){
+  const pf=precosDoProduto(prod,codItem),agora=Date.now();let best=null;
+  Object.keys(pf).forEach(fid=>{
+    const f=FORNECEDORES.find(x=>String(x.id)===String(fid));if(!f)return;
+    const r=pf[fid];if(isNaN(r.preco)||r.preco<0)return;
+    if(f.promo){const dias=r.d?(agora-r.d.getTime())/86400000:999;if(dias>15)return;}   // promoção caducada (>15 dias)
+    if(!best||r.preco<best.preco)best={forn:f,preco:r.preco,data:r.data};
+  });
+  return best;
+}
+function encAgruparMelhor(){
+  const items=ENCOMENDAS['melhor']||[],grupos={};
+  items.forEach((it,idx)=>{
+    const prod=findProd(it.cod)||null,mf=melhorFornecedor(prod,it.cod);
+    const nomeF=mf?mf.forn.nome:'Outros (sem preço registado)',fam=(prod&&prod.cat)||'Sem família';
+    const g=grupos[nomeF]||(grupos[nomeF]={nome:nomeF,outros:!mf,total:0,fam:{}});
+    (g.fam[fam]=g.fam[fam]||[]).push({it,idx,preco:mf?mf.preco:null});
+    if(mf)g.total+=mf.preco*it.qtd;
+  });
+  const lista=Object.values(grupos).sort((a,b)=>(a.outros-b.outros)||a.nome.localeCompare(b.nome,'pt'));
+  lista.forEach(g=>{g.famKeys=Object.keys(g.fam).sort((a,b)=>a.localeCompare(b,'pt'));g.famKeys.forEach(k=>g.fam[k].sort((a,b)=>String(a.it.nome).localeCompare(String(b.it.nome),'pt')));});
+  return lista;
+}
+function encCardMelhor(r){
+  const it=r.it,idx=r.idx,img=it.imgUrl||'';
+  const imgHtml=img?`<img src="${img}" class="enc-item-img" onerror="this.outerHTML='<div class=enc-item-img-e>📦</div>'">`:`<div class="enc-item-img-e">📦</div>`;
+  return `<div class="enc-item"><div class="enc-item-row">${imgHtml}
+    <div class="enc-item-info"><div class="enc-item-nome">${escH(it.nome)}</div>
+      <div class="enc-item-cod">${escH(it.cod)}<button class="enc-un" onclick="encToggleUn(${idx})">${it.un||'CX'}</button>${r.preco!=null?`<span class="enc-pr">${r.preco.toFixed(2)}€</span>`:'<span class="enc-pr sem">sem preço</span>'}<button class="enc-item-del" onclick="encApagarItem(${idx})" title="Remover">✕</button></div></div>
+    <div class="enc-item-qtd-wrap"><button class="enc-qtd-btn" onclick="encAlterarQtd(${idx},-1)">−</button><input class="enc-qtd-inp" type="number" min="1" value="${it.qtd}" onchange="encSetQtd(${idx},this.value)" onclick="this.select()"><button class="enc-qtd-btn" onclick="encAlterarQtd(${idx},1)">+</button></div>
+  </div></div>`;
+}
+function renderEncomendaMelhor(wrap,items){
+  const grupos=encAgruparMelhor();
+  const totalUnd=items.reduce((a,x)=>a+x.qtd,0),totalVal=grupos.reduce((a,g)=>a+g.total,0);
+  let html='<div class="enc-list">';
+  grupos.forEach(g=>{
+    html+=`<div class="encm-forn"><span>${g.outros?'❔':'🏭'} ${escH(g.nome)}</span><b>${g.total>0?g.total.toFixed(2)+'€':''}</b></div>`;
+    g.famKeys.forEach(fk=>{html+=`<div class="encm-fam">${escH(fk)}</div>`+g.fam[fk].map(encCardMelhor).join('');});
+  });
+  html+='</div>';
+  html+=`<div class="enc-total"><div><div class="enc-total-lbl">Total unidades</div><div style="font-size:11px;color:var(--muted);margin-top:2px">${items.length} artigo(s) · ${grupos.length} fornecedor(es)</div></div><div class="enc-total-val">${totalUnd} und.</div></div>`;
+  if(totalVal>0)html+=`<div style="margin:0 12px 8px;background:var(--navy);border:1px solid rgba(16,185,129,0.2);border-radius:var(--r12);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;"><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;font-weight:700;">Valor estimado</div><div style="font-size:18px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--a2);">${totalVal.toFixed(2)}€</div></div>`;
+  html+=`<div class="enc-acoes"><button class="enc-act enc-act-imp" onclick="imprimirEncomenda()">🖨️ Imprimir</button><button class="enc-act enc-act-xls" onclick="exportarEncomendaExcel()">📊 Excel</button><button class="enc-act enc-act-del" onclick="apagarEncomenda()">🗑️ Limpar tudo</button></div>`;
+  wrap.innerHTML=html;
+}
+function imprimirEncomendaMelhor(){
+  const items=ENCOMENDAS['melhor']||[];
+  if(!items.length){toast('Encomenda vazia','err');return;}
+  const grupos=encAgruparMelhor(),d=new Date();
+  const ds=d.toLocaleDateString('pt-PT')+' '+d.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'});
+  const totalUnd=items.reduce((a,x)=>a+x.qtd,0),totalVal=grupos.reduce((a,g)=>a+g.total,0);
+  let corpo='';
+  grupos.forEach(g=>{
+    const und=g.famKeys.reduce((a,k)=>a+g.fam[k].reduce((b,r)=>b+r.it.qtd,0),0);
+    corpo+=`<h2>${escH(g.nome)}<span>${und} und.${g.total>0?' · '+g.total.toFixed(2)+'€':''}</span></h2><table><thead><tr><th>Produto</th><th>Código</th><th>Un.</th><th style="text-align:center">Qtd.</th><th style="text-align:right">Preço unit.</th><th style="text-align:right">Total</th></tr></thead><tbody>`;
+    g.famKeys.forEach(fk=>{
+      corpo+=`<tr class="fam"><td colspan="6">${escH(fk)}</td></tr>`;
+      g.fam[fk].forEach((r,i)=>{corpo+=`<tr><td class="n">${escH(r.it.nome)}</td><td class="c">${escH(r.it.cod)}</td><td style="text-align:center">${r.it.un||'CX'}</td><td class="q">${r.it.qtd}</td><td style="text-align:right">${r.preco!=null?r.preco.toFixed(2)+'€':'—'}</td><td style="text-align:right;font-weight:700">${r.preco!=null?(r.preco*r.it.qtd).toFixed(2)+'€':'—'}</td></tr>`;});
+    });
+    corpo+='</tbody></table>';
+  });
+  const html=`<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>Encomenda — Melhor fornecedor</title><style>
+    body{font-family:Arial,sans-serif;margin:0;padding:18px;color:#1a2340}
+    h1{font-size:21px;margin:0 0 4px}.sub{font-size:12px;color:#666;margin-bottom:12px}.logo{font-size:13px;color:#c9a84c;font-weight:800;margin-bottom:6px}
+    h2{background:#1a2340;color:#fff;font-size:14px;margin:16px 0 0;padding:8px 10px;display:flex;justify-content:space-between;break-after:avoid}
+    h2 span{color:#c9a84c;font-weight:700}
+    table{width:100%;border-collapse:collapse;border:1px solid #e0e7ef}
+    th{background:#eef1f6;padding:6px 8px;font-size:10px;text-transform:uppercase;text-align:left}
+    td{padding:6px 8px;font-size:12px;border-top:1px solid #eef1f6}
+    tr{break-inside:avoid}
+    tr.fam td{background:#f1f5f9;font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:.4px}
+    td.n{font-weight:600}td.c{font-family:monospace;font-size:11px;color:#555}td.q{text-align:center;font-size:14px;font-weight:800}
+    .tot{margin-top:16px;border-top:2px solid #1a2340;padding-top:8px;font-weight:800;font-size:14px;display:flex;justify-content:space-between}
+    @media print{body{padding:8px}}
+  </style></head><body><div class="logo">PriceCheck · Pro</div><h1>Encomenda — Melhor fornecedor</h1>
+  <div class="sub">Emitida em ${ds} · ${items.length} artigo(s) · ${grupos.length} fornecedor(es) · agrupado por fornecedor e família</div>${corpo}
+  <div class="tot"><span>TOTAL ${totalUnd} und.</span><span>${totalVal>0?totalVal.toFixed(2)+'€':''}</span></div>
+  <script>window.onload=()=>window.print();<\/script></body></html>`;
+  const w=window.open('','_blank');w.document.write(html);w.document.close();
+}
+function exportarEncomendaMelhorExcel(){
+  const items=ENCOMENDAS['melhor']||[];
+  if(!items.length){toast('Encomenda vazia','err');return;}
+  const rows=[];
+  encAgruparMelhor().forEach(g=>g.famKeys.forEach(fk=>g.fam[fk].forEach(r=>rows.push([g.nome,fk,r.it.cod,r.it.nome,r.it.un||'CX',r.it.qtd,r.preco!=null?Number(r.preco.toFixed(2)):'',r.preco!=null?Number((r.preco*r.it.qtd).toFixed(2)):'']))));
+  const ws=XLSX.utils.aoa_to_sheet([['Fornecedor','Família','Código','Produto','Un.','Qtd.','Preço unit. €','Total €'],...rows]);
+  ws['!cols']=[{wch:26},{wch:18},{wch:14},{wch:34},{wch:6},{wch:7},{wch:13},{wch:11}];
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Melhor fornecedor');
+  XLSX.writeFile(wb,'PriceCheck_Encomenda_MelhorFornecedor_'+new Date().toISOString().split('T')[0]+'.xlsx');
+  toast('✓ Exportado!','ok');
+}
 
 // ══ INIT ══
 (async()=>{
