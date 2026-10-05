@@ -490,6 +490,12 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
 .enc-pr.sem{color:#64748b;font-weight:600;font-family:'Inter',sans-serif;}
 .fi-promo{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;margin-top:5px;cursor:pointer;}
 .fi-promo input{width:17px;height:17px;accent-color:#a4122f;}
+.promo-chk{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13px;font-weight:700;color:var(--text);cursor:pointer;}
+.promo-chk input{width:20px;height:20px;accent-color:#a4122f;}
+.frep-promo{display:flex;align-items:center;gap:3px;font-size:13px;cursor:pointer;flex-shrink:0;}
+.frep-promo input{width:19px;height:19px;accent-color:#a4122f;}
+.fat-promo{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;margin-top:5px;cursor:pointer;color:#a4122f;}
+.fat-promo input{width:17px;height:17px;accent-color:#a4122f;}
 </style>
 </head>
 <body>
@@ -666,6 +672,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
     <input type="text" class="nm-input" id="nmodal-nome" placeholder="Ex: Açúcar Branco 1Kg">
     <div class="nm-lbl">Preço <span id="nmodal-forn-txt" style="color:var(--a2)"></span></div>
     <input type="number" step="0.01" min="0" class="nm-pinput" id="nmodal-preco" placeholder="0.00">
+    <label class="promo-chk"><input type="checkbox" id="nmodal-promo"> 🏷️ Preço promoção (conta só 15 dias)</label>
     <div class="nm-btns">
       <button class="nm-btn nm-ok" onclick="guardarPrecoNaoEncontrado()">💾 Guardar</button>
       <button class="nm-btn nm-cancel" onclick="document.getElementById('nmodal-bg').classList.remove('open')">✕ Cancelar</button>
@@ -1522,7 +1529,7 @@ function mostrarProdModal(prod){
       const mb=i===0&&entradas.length>1,pw=i===entradas.length-1&&entradas.length>1;
       const ce=cod.replace(/'/g,"\\'"),pe=prod.nome.replace(/'/g,"\\'"),ne=nf.replace(/'/g,"\\'");
       histHtml+=`<div class="hist-row">
-        <div><div class="hist-forn">${mb?'🥇 ':pw?'🔴 ':''}${nf}</div><div class="hist-data">📅 ${e.ul.data} · ${e.total}×</div></div>
+        <div><div class="hist-forn">${mb?'🥇 ':pw?'🔴 ':''}${nf}${e.ul&&e.ul.promo?' 🏷️':''}</div><div class="hist-data">📅 ${e.ul.data} · ${e.total}×</div></div>
         <div style="display:flex;align-items:center;gap:8px">
           <div class="hist-preco" style="color:${mb?'var(--a2)':pw?'var(--danger)':'var(--text)'}">${parseFloat(e.ul.preco).toFixed(2)}€</div>
           <button onclick="event.stopPropagation();abrirHistForn('${ce}','${String(e.fid)}','${ne}','${pe}')" style="background:var(--s2);border:1px solid var(--bd);color:var(--muted);border-radius:5px;padding:3px 7px;font-size:10px;cursor:pointer">···</button>
@@ -1543,6 +1550,7 @@ function mostrarProdModal(prod){
         <input type="number" step="0.01" min="0" class="pm-inp" id="pm-preco" value="${precoFornAtual}" placeholder="0.00">
         <span class="pm-inp-unit">€</span>
       </div>
+      <label class="promo-chk"><input type="checkbox" id="pm-promo"> 🏷️ Preço promoção (conta só 15 dias)</label>
     </div>${diffHtml}`:semForn;
 
   const ce3=cod.replace(/'/g,"\\'");
@@ -1611,7 +1619,8 @@ function guardarPreco(cod,prodId){
   if(isNaN(preco)||preco<0){toast('Preço inválido','err');return;}
   if(!PRECOS_DB[cod])PRECOS_DB[cod]={};
   if(!PRECOS_DB[cod][FORN_ATIVO.id])PRECOS_DB[cod][FORN_ATIVO.id]=[];
-  PRECOS_DB[cod][FORN_ATIVO.id].push({preco,data:dataAgora(),prodId});
+  const _pr=document.getElementById('pm-promo');
+  PRECOS_DB[cod][FORN_ATIVO.id].push(Object.assign({preco,data:dataAgora(),prodId},_pr&&_pr.checked?{promo:true}:{}));
   salvarPrecos();fecharPmodal();atualizarStats();
   toast('✓ '+preco.toFixed(2)+'€ — '+FORN_ATIVO.nome,'ok');
 }
@@ -1624,7 +1633,9 @@ function guardarPrecoNaoEncontrado(){
   const fid=FORN_ATIVO?FORN_ATIVO.id:'sem_forn';
   if(!PRECOS_DB[cod])PRECOS_DB[cod]={};
   if(!PRECOS_DB[cod][fid])PRECOS_DB[cod][fid]=[];
-  PRECOS_DB[cod][fid].push({preco,data:dataAgora(),nome:nome||cod});
+  const _np=document.getElementById('nmodal-promo');
+  PRECOS_DB[cod][fid].push(Object.assign({preco,data:dataAgora(),nome:nome||cod},_np&&_np.checked?{promo:true}:{}));
+  if(_np)_np.checked=false;
   salvarPrecos();
   document.getElementById('nmodal-bg').classList.remove('open');
   atualizarStats();
@@ -1634,7 +1645,7 @@ function guardarPrecoNaoEncontrado(){
 // ══ HISTÓRICO ══
 function abrirHistForn(cod,fid,nomeForn,nomeProd){
   const hist=(PRECOS_DB[cod]?.[fid]||[]).slice().reverse();
-  const rows=hist.map((e,i)=>`<div class="hm-row"><div><div class="hm-forn">${nomeForn}</div><div class="hm-data">📅 ${e.data}</div></div><div class="hm-preco">${parseFloat(e.preco).toFixed(2)}€</div><button class="hm-del" onclick="apagarHist('${cod}','${fid}',${hist.length-1-i},'${nomeForn}','${nomeProd}')">✕</button></div>`).join('');
+  const rows=hist.map((e,i)=>`<div class="hm-row"><div><div class="hm-forn">${nomeForn}${e.promo?' 🏷️ promoção':''}</div><div class="hm-data">📅 ${e.data}</div></div><div class="hm-preco">${parseFloat(e.preco).toFixed(2)}€</div><button class="hm-del" onclick="apagarHist('${cod}','${fid}',${hist.length-1-i},'${nomeForn}','${nomeProd}')">✕</button></div>`).join('');
   _histModal(nomeProd,nomeForn+' · '+hist.length+' registo(s)',rows,cod,nomeProd);
 }
 function abrirHistTodos(cod,nomeProd){
@@ -1778,7 +1789,7 @@ function renderFornecedores(){
     const nr=Object.values(PRECOS_DB).reduce((a,pf)=>a+(pf[f.id]?.length||0),0);
     return`<div class="fitem${at?' ativo':''}" onclick="selecionarFornecedor(${f.id})">
       <div class="fava" title="Ver lista deste fornecedor" onclick="event.stopPropagation();abrirFornRelatorio(${f.id})">${fornLogo(f.id)?`<img src="${fornLogo(f.id)}" alt="">`:'🏭'}</div>
-      <div class="ficol"><div class="finome">${f.nome}</div><div class="fistats">${np} produto(s) · ${nr} registo(s)</div><label class="fi-promo" onclick="event.stopPropagation()"><input type="checkbox" ${f.promo?'checked':''} onchange="togglePromo(${f.id},this.checked)"> 🏷️ Preço promoção (15 dias)</label></div>
+      <div class="ficol"><div class="finome">${f.nome}</div><div class="fistats">${np} produto(s) · ${nr} registo(s)</div></div>
       <div class="fiacts">
         ${at?'<span class="fi-ativo-b">ATIVO</span>':''}
         <button class="fi-lista" onclick="event.stopPropagation();abrirFornRelatorio(${f.id})">📋 Lista</button>
@@ -1800,11 +1811,7 @@ function irParaFornecedores(){
   const at=(document.querySelector('.screen.active')||{}).id;
   window._origemForn=(at&&at!=='m4')?at:null;nav('m4');
 }
-function togglePromo(id,v){
-  const f=FORNECEDORES.find(x=>String(x.id)===String(id));if(!f)return;
-  f.promo=!!v;salvarForn();
-  toast(v?'🏷️ '+f.nome+': preços de promoção (só contam 15 dias)':f.nome+': preços normais','ok');
-}
+
 function atualizarHeaderForn(){
   const hf=document.getElementById('hforn'),hn=document.getElementById('hforn-nome');
   if(FORN_ATIVO){hf.className='hforn ativo';hn.textContent=FORN_ATIVO.nome;}
@@ -2632,6 +2639,7 @@ function fatRemover(i){
     const pe=document.getElementById('fat-preco-'+k),ck=document.getElementById('fat-chk-'+k);
     if(pe){const v=parseFloat(pe.value);x.preco=isNaN(v)?null:v;}
     if(ck)x.chk=ck.checked;
+    const pcx=document.getElementById('fat-promo-'+k);if(pcx)x.promo=pcx.checked;
   });
   FAT.linhas.splice(i,1);renderFatura();
 }
@@ -2996,6 +3004,7 @@ function renderFatura(){
         <div class="fat-nome">${String(x.nome).replace(/</g,'&lt;')}${x.fora?'<span class="fat-tag">fora da base</span>':''}${x.duv?'<span class="fat-tag">confirmar código</span>':''}${(!x.fora&&x.metodo==='estimado')?'<span class="fat-tag">estimado</span>':''}</div>
         <div class="fat-cod">${x.cod}</div>${chips}
         <div class="fat-ant" id="fat-ant-${i}"></div>
+        <label class="fat-promo"><input type="checkbox" id="fat-promo-${i}" ${x.promo?'checked':''}> 🏷️ promoção</label>
       </div>
       <input class="fat-preco" id="fat-preco-${i}" type="number" step="0.001" inputmode="decimal" value="${x.preco!=null?x.preco:''}" placeholder="€" oninput="fatRefreshAnteriores()">
       <button class="fat-x" title="Não considerar esta linha" onclick="fatRemover(${i})">✕</button>
@@ -3234,6 +3243,7 @@ function fatAplicar(){
     const _h=PRECOS_DB[x.cod][fidKey],_u=_h[_h.length-1];
     if(_u&&parseFloat(_u.preco)===preco&&String(_u.data).split(' ')[0]===data.split(' ')[0])return;   // já registado hoje com este preço
     const entrada={preco,data};
+    const _pcf=document.getElementById('fat-promo-'+i);if(_pcf&&_pcf.checked)entrada.promo=true;
     if(x.prod)entrada.prodId=x.prod.id;else entrada.nome=x.nome;
     PRECOS_DB[x.cod][fidKey].push(entrada);
     n++;
@@ -3345,6 +3355,7 @@ function renderFornRelatorio(){
         `<div class="frep-ent">
           <input class="p" id="frep-p-${i}-${k}" type="number" step="0.001" inputmode="decimal" value="${parseFloat(e.preco)}">
           <input class="d" id="frep-d-${i}-${k}" type="date" value="${dataParaISO(e.data)}">
+          <label class="frep-promo" title="Preço promoção"><input type="checkbox" ${e.promo?'checked':''} onchange="frepPromo(${i},${k},this.checked)">🏷️</label>
           <button class="frep-b ok" title="Guardar" onclick="frepGuardar(${i},${k})">✓</button>
           <button class="frep-b x" title="Eliminar" onclick="frepApagar(${i},${k})">🗑️</button>
         </div>`).join('')+
@@ -3352,11 +3363,18 @@ function renderFornRelatorio(){
     }
     return `<div class="frep-row"><div class="frep-main" onclick="frepToggle(${i})">
       <div class="frep-nome"><b>${String(r.nome).replace(/</g,'&lt;')}</b><span>${r.cod} · ${r.h.length} reg.</span></div>
-      <div class="frep-pr"><b>${parseFloat(ul.preco).toFixed(2)}€</b><span>${(ul.data||'').split(' ')[0]}</span></div>
+      <div class="frep-pr"><b>${parseFloat(ul.preco).toFixed(2)}€${ul.promo?' 🏷️':''}</b><span>${(ul.data||'').split(' ')[0]}</span></div>
       <span style="color:var(--muted);font-size:12px">${aberto?'▴':'▾'}</span></div>${hist}</div>`;
   }).join('');
 }
 function frepToggle(i){const r=FREP.rows[i];if(!r)return;FREP.open.has(r.cod)?FREP.open.delete(r.cod):FREP.open.add(r.cod);renderFornRelatorio();}
+function frepPromo(i,k,v){
+  const r=FREP.rows[i];if(!r)return;
+  const e=PRECOS_DB[r.cod]?.[FREP.id]?.[k];if(!e)return;
+  if(v)e.promo=true;else delete e.promo;
+  salvarPrecos();renderFornRelatorio();
+  toast(v?'🏷️ Marcado como promoção (conta 15 dias)':'Preço normal','ok');
+}
 function frepGuardar(i,k){
   const r=FREP.rows[i];if(!r)return;
   const e=PRECOS_DB[r.cod]?.[FREP.id]?.[k];if(!e)return;
@@ -3662,27 +3680,32 @@ function encSetModo(m){
 }
 const escH=t=>String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;');
 function dataParaDate(str){const m=String(str||'').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);return m?new Date(+m[3],+m[2]-1,+m[1]):null;}
-// último preço registado de cada fornecedor para este produto
+// preço válido mais recente de cada fornecedor; um preço marcado como promoção deixa de contar passados 15 dias
 function precosDoProduto(prod,codItem){
   const keys=[...new Set([codItem,prod&&getCod(prod),prod&&prod.cod,prod&&prod.ean,prod&&prod.f].filter(k=>k&&codValido(k)))];
-  const porForn={};
+  const porForn={},agora=Date.now();
   keys.forEach(k=>{
     const o=PRECOS_DB[k]||{};
     Object.keys(o).forEach(fid=>{
       const h=o[fid];if(!h||!h.length)return;
-      const ul=h[h.length-1],d=dataParaDate(ul.data),cur=porForn[fid];
-      if(!cur||!cur.d||(d&&d>cur.d))porForn[fid]={preco:parseFloat(ul.preco),data:ul.data,d};
+      for(let i=h.length-1;i>=0;i--){
+        const e=h[i],d=dataParaDate(e.data),preco=parseFloat(e.preco);
+        if(isNaN(preco)||preco<0)continue;
+        if(e.promo){const dias=d?(agora-d.getTime())/86400000:999;if(dias>15)continue;}   // promoção caducada → procura o preço anterior
+        const cur=porForn[fid];
+        if(!cur||(d&&(!cur.d||d>cur.d)))porForn[fid]={preco,data:e.data,d,promo:!!e.promo};
+        break;
+      }
     });
   });
   return porForn;
 }
 function melhorFornecedor(prod,codItem){
-  const pf=precosDoProduto(prod,codItem),agora=Date.now();let best=null;
+  const pf=precosDoProduto(prod,codItem);let best=null;
   Object.keys(pf).forEach(fid=>{
     const f=FORNECEDORES.find(x=>String(x.id)===String(fid));if(!f)return;
-    const r=pf[fid];if(isNaN(r.preco)||r.preco<0)return;
-    if(f.promo){const dias=r.d?(agora-r.d.getTime())/86400000:999;if(dias>15)return;}   // promoção caducada (>15 dias)
-    if(!best||r.preco<best.preco)best={forn:f,preco:r.preco,data:r.data};
+    const r=pf[fid];
+    if(!best||r.preco<best.preco)best={forn:f,preco:r.preco,data:r.data,promo:r.promo};
   });
   return best;
 }
