@@ -496,6 +496,8 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
 .frep-promo input{width:19px;height:19px;accent-color:#a4122f;}
 .fat-promo{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;margin-top:5px;cursor:pointer;color:#a4122f;}
 .fat-promo input{width:17px;height:17px;accent-color:#a4122f;}
+.fat-cod-inp{width:100%;box-sizing:border-box;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:#1a2340;background:#fff;border:1.5px dashed #a4122f;border-radius:6px;padding:5px 7px;margin-top:4px;outline:none;}
+.fat-sug{margin-top:6px;font-size:11px;font-weight:700;color:#10b981;cursor:pointer;line-height:1.3;}
 </style>
 </head>
 <body>
@@ -2634,6 +2636,47 @@ async function fatLerColunas(file,rA,rB){
   FAT.busy=false;
   document.getElementById('fat-prog').style.display='none';
 }
+
+// ══ CORRIGIR O CÓDIGO LIDO E PROCURAR O PRODUTO SOZINHA ══
+function fatCapturar(){
+  FAT.linhas.forEach((x,k)=>{
+    const pe=document.getElementById('fat-preco-'+k),ck=document.getElementById('fat-chk-'+k),pm=document.getElementById('fat-promo-'+k);
+    if(pe){const v=parseFloat(pe.value);x.preco=isNaN(v)?null:v;}
+    if(ck)x.chk=ck.checked;
+    if(pm)x.promo=pm.checked;
+  });
+}
+// produto cujo código só difere de 1 dígito (o erro de OCR mais comum); só sugere se houver um único candidato
+function fatSugestao(c){
+  if(!/^\d{8,14}$/.test(c))return null;
+  const idx=idxProdutos(),m12=idx.__12;
+  const h1=(a,b)=>{if(a.length!==b.length)return false;let d=0;for(let i=0;i<a.length;i++)if(a[i]!==b[i]&&++d>1)return false;return d===1;};
+  const ach=[];
+  idx.forEach((p,k)=>{if(k.length===c.length&&/^\d+$/.test(k)&&h1(k,c))ach.push(p);});
+  if(c.length===14)m12.forEach((p,k)=>{if(h1(k,c.slice(1,13)))ach.push(p);});
+  if(c.length===13)m12.forEach((p,k)=>{if(h1(k,c.slice(0,12)))ach.push(p);});
+  const uni=[...new Set(ach)];
+  return uni.length===1?uni[0]:null;
+}
+function fatEditarCodigo(i,val){
+  fatCapturar();
+  const x=FAT.linhas[i];if(!x)return;
+  const dig=String(val||'').replace(/[^0-9A-Za-z]/g,'');
+  if(!dig){renderFatura();return;}
+  const prod=findProd(dig)||null;
+  if(prod){
+    const cod=getCod(prod);
+    if(FAT.linhas.some((y,k)=>k!==i&&!y.fora&&y.cod===cod)){toast('Esse produto já está na lista','err');x.cod=dig;x.sug=undefined;renderFatura();return;}
+    x.prod=prod;x.nome=prod.nome;x.cod=cod;x.fora=false;x.duv=false;x.sug=null;x.chk=x.preco!=null;
+    toast('✓ Encontrado: '+prod.nome,'ok');
+  }else{
+    x.prod=null;x.fora=true;x.cod=dig;x.nome=dig;x.chk=false;x.sug=undefined;
+    x.duv=!(/^\d{8,14}$/.test(dig)&&gtinValido(dig));
+    toast('Esse código não está na base','err');
+  }
+  renderFatura();
+}
+function fatAceitarSug(i){const x=FAT.linhas[i];if(x&&x.sug)fatEditarCodigo(i,getCod(x.sug));}
 function fatRemover(i){
   FAT.linhas.forEach((x,k)=>{
     const pe=document.getElementById('fat-preco-'+k),ck=document.getElementById('fat-chk-'+k);
@@ -2996,13 +3039,14 @@ function renderFatura(){
     return;
   }
   document.getElementById('fat-apply').style.display='';
+  L.forEach(x=>{if(x.fora&&x.sug===undefined)x.sug=fatSugestao(x.cod)||null;});
   box.innerHTML=L.map((x,i)=>{
     const chips=x.chips.length>1?`<div class="fat-chips">${x.chips.map(c=>`<span class="fat-chip" onclick="fatSetPreco(${i},${c})">${c.toFixed(2)}</span>`).join('')}</div>`:'';
     return `<div class="fat-row ${x.fora?'off':''}" id="fat-row-${i}">
       <input type="checkbox" id="fat-chk-${i}" ${(x.chk!==undefined?x.chk:(!x.fora&&x.preco!=null))?'checked':''} onchange="document.getElementById('fat-row-${i}').classList.toggle('off',!this.checked)">
       <div class="fat-info">
         <div class="fat-nome">${String(x.nome).replace(/</g,'&lt;')}${x.fora?'<span class="fat-tag">fora da base</span>':''}${x.duv?'<span class="fat-tag">confirmar código</span>':''}${(!x.fora&&x.metodo==='estimado')?'<span class="fat-tag">estimado</span>':''}</div>
-        <div class="fat-cod">${x.cod}</div>${chips}
+        ${x.fora?`<input class="fat-cod-inp" id="fat-cod-${i}" value="${x.cod}" inputmode="numeric" onfocus="this.select()" onchange="fatEditarCodigo(${i},this.value)" title="Corrija o código; a app procura o produto sozinha">`:`<div class="fat-cod">${x.cod}</div>`}${(x.fora&&x.sug)?`<div class="fat-sug" onclick="fatAceitarSug(${i})">💡 Será <b>${escH(x.sug.nome)}</b>? Toque para usar</div>`:''}${chips}
         <div class="fat-ant" id="fat-ant-${i}"></div>
         <label class="fat-promo"><input type="checkbox" id="fat-promo-${i}" ${x.promo?'checked':''}> 🏷️ promoção</label>
       </div>
