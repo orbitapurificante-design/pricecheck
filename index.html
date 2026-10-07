@@ -546,11 +546,14 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
     <div class="dsep">Exportar</div>
     <button class="dbtn dbtn-s" onclick="exportarComparativo();fecharTudo()">📊 Exportar Comparativo Excel</button>
     <button class="dbtn dbtn-s" onclick="exportarHistorico();fecharTudo()">📋 Exportar Histórico Excel</button>
+    <button class="dbtn dbtn-s" onclick="exportarPrecosExcel();fecharTudo()">📤 Exportar preços (Excel para editar)</button>
+    <button class="dbtn dbtn-s" onclick="document.getElementById('f-precos-xlsx').click();fecharTudo()">📥 Importar preços (Excel editado)</button>
     <div class="dsep">Sistema</div>
     <button class="dbtn dbtn-d" onclick="if(confirm('Apagar TODOS os preços?')){PRECOS_DB={};salvarPrecos();atualizarStats();toast('Preços apagados','ok');fecharTudo();}">🗑️ Limpar Todos os Preços</button>
   </div>
   <input type="file" id="f-excel" accept=".xlsx,.xls,.csv" style="display:none">
   <input type="file" id="f-fotos" multiple accept="image/*" style="display:none">
+  <input type="file" id="f-precos-xlsx" accept=".xlsx,.xls" style="display:none">
   <input type="file" id="f-fotos-json" multiple accept=".json,application/json" style="display:none">
   <input type="file" id="f-import" accept=".json" style="display:none">
 </div>
@@ -723,7 +726,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
   <div class="stat-grid">
     <div class="stat-c"><div class="stat-n" id="s-prod">0</div><div class="stat-l">Produtos</div></div>
     <div class="stat-c"><div class="stat-n" id="s-forn">0</div><div class="stat-l">Fornecedores</div></div>
-    <div class="stat-c"><div class="stat-n" id="s-prec">0</div><div class="stat-l">Preços</div></div>
+    <div class="stat-c"><div class="stat-n" id="s-prec" style="font-size:15px">0</div><div class="stat-l" style="font-size:9px;line-height:1.2">Preços / Prod. c/ preço</div></div>
     <div class="stat-c"><div class="stat-n" id="s-hoje">0</div><div class="stat-l">Hoje</div></div>
   </div>
 </div>
@@ -1579,8 +1582,8 @@ function mostrarProdModal(prod){
     </div>
     <div class="pm-ref">
       <div>
-        <div class="pm-ref-lbl">Referência Excel</div>
-        ${prod.precoCusto>0?`<div style="font-size:10px;color:var(--muted);margin-top:2px">Custo: ${prod.precoCusto.toFixed(2)}€</div>`:''}
+        <div class="pm-ref-lbl">Preço venda</div>
+        ${(()=>{const u=ultimoPrecoProduto(prod,COD_ATUAL);return u?`<div style="font-size:10px;color:var(--muted);margin-top:2px">Último preço: ${u.preco.toFixed(2)}€ · ${escH(u.forn)} · ${String(u.data).split(' ')[0]}</div>`:'';})()}
       </div>
       <div class="pm-ref-val">${prod.preco>0?prod.preco.toFixed(2)+'€':'N/D'}</div>
     </div>
@@ -1855,7 +1858,13 @@ function atualizarStats(){
   document.getElementById('s-prod').textContent=DADOS.length;
   document.getElementById('s-forn').textContent=FORNECEDORES.length;
   const tot=Object.values(PRECOS_DB).reduce((a,pf)=>a+Object.values(pf).reduce((b,h)=>b+h.length,0),0);
-  document.getElementById('s-prec').textContent=tot;
+  const _idx=idxProdutos(),_ids=new Set();
+  Object.keys(PRECOS_DB).forEach(k=>{
+    if(!Object.values(PRECOS_DB[k]||{}).some(h=>h&&h.length))return;
+    const nk=fatNorm(k),pr=_idx.get(nk)||_idx.get(nk.replace(/^0+/,''));
+    _ids.add(pr?'p'+pr.id:'k'+k);
+  });
+  document.getElementById('s-prec').textContent=tot+' / '+_ids.size;
   const hoje=new Date().toLocaleDateString('pt-PT');
   let hj=0;
   Object.values(PRECOS_DB).forEach(pf=>Object.values(pf).forEach(h=>h.forEach(e=>{if(e.data&&e.data.startsWith(hoje))hj++;})));
@@ -3835,6 +3844,84 @@ function exportarEncomendaMelhorExcel(){
   XLSX.writeFile(wb,'PriceCheck_Encomenda_MelhorFornecedor_'+new Date().toISOString().split('T')[0]+'.xlsx');
   toast('✓ Exportado!','ok');
 }
+
+
+// ══ EXCEL DE PREÇOS: exportar → editar no Excel → importar ══
+function dataHora(str){const m=String(str||'').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/);return m?new Date(+m[3],+m[2]-1,+m[1],+(m[4]||0),+(m[5]||0)).getTime():0;}
+function chavesProduto(prod,cod){return [...new Set([cod,prod&&getCod(prod),prod&&prod.cod,prod&&prod.ean,prod&&prod.f].filter(k=>k&&codValido(k)))];}
+function ultimoPrecoForn(prod,fid){
+  let best=null;
+  chavesProduto(prod).forEach(k=>{
+    const h=(PRECOS_DB[k]||{})[fid];if(!h||!h.length)return;
+    h.forEach(e=>{const t=dataHora(e.data),pr=parseFloat(e.preco);if(isNaN(pr))return;if(!best||t>=best.t)best={preco:pr,data:e.data,t,key:k};});
+  });
+  return best;
+}
+function ultimoPrecoProduto(prod,cod){
+  let best=null;
+  chavesProduto(prod,cod).forEach(k=>{
+    const o=PRECOS_DB[k]||{};
+    Object.keys(o).forEach(fid=>(o[fid]||[]).forEach(e=>{
+      const t=dataHora(e.data),pr=parseFloat(e.preco);if(isNaN(pr))return;
+      if(!best||t>=best.t){const f=FORNECEDORES.find(x=>String(x.id)===String(fid));best={preco:pr,data:e.data,t,forn:f?f.nome:'?'};}
+    }));
+  });
+  return best;
+}
+function exportarPrecosExcel(){
+  if(!DADOS.length){toast('Carregue primeiro o Excel de produtos','err');return;}
+  if(!FORNECEDORES.length){toast('Crie primeiro os fornecedores','err');return;}
+  const cab=['Chave','EAN','Produto','Família','Preço venda',...FORNECEDORES.map(f=>f.nome)];
+  const lista=DADOS.slice().sort((a,b)=>String(a.cat).localeCompare(String(b.cat),'pt')||String(a.nome).localeCompare(String(b.nome),'pt'));
+  const rows=lista.map(p=>[getCod(p),p.ean||'',p.nome,p.cat||'',p.preco>0?p.preco:'',...FORNECEDORES.map(f=>{const u=ultimoPrecoForn(p,f.id);return u?Number(u.preco.toFixed(4)):'';})]);
+  const ws=XLSX.utils.aoa_to_sheet([cab,...rows]);
+  ws['!cols']=[{wch:16},{wch:15},{wch:42},{wch:16},{wch:11},...FORNECEDORES.map(()=>({wch:14}))];
+  ws['!freeze']={xSplit:3,ySplit:1};
+  const info=XLSX.utils.aoa_to_sheet([['COMO USAR'],['1. Altere ou escreva os preços nas colunas dos fornecedores (a partir da coluna F).'],['2. Deixe em branco o que não quer mexer.'],['3. NÃO altere a coluna "Chave" nem os nomes dos fornecedores na linha 1.'],['4. Guarde o ficheiro e use no menu: Importar preços (Excel editado).'],['5. Só são registados os preços que mudaram (com a data de hoje).']]);
+  info['!cols']=[{wch:90}];
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Preços');XLSX.utils.book_append_sheet(wb,info,'Instruções');
+  XLSX.writeFile(wb,'PriceCheck_Precos_'+new Date().toISOString().split('T')[0]+'.xlsx');
+  toast('✓ Excel exportado — edite e volte a importar','ok');
+}
+document.getElementById('f-precos-xlsx').onchange=function(e){
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  const rd=new FileReader();
+  rd.onload=ev=>{
+    try{
+      const wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array'});
+      const ws=wb.Sheets['Preços']||wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      if(rows.length<2){toast('Ficheiro vazio','err');return;}
+      const nn=t=>fatSemAcentos(String(t)).trim();
+      const colF=[];rows[0].forEach((h,c)=>{if(c<5)return;const f2=FORNECEDORES.find(x=>nn(x.nome)===nn(h));if(f2)colF.push({c,f:f2});});
+      if(!colF.length){toast('Não encontrei colunas de fornecedores (não altere os nomes na linha 1)','err');return;}
+      const idx=idxProdutos(),mudar=[];let semProd=0,prodsTocados=new Set();
+      rows.slice(1).forEach(r=>{
+        const chave=String(r[0]).trim();if(!chave)return;
+        const nk=fatNorm(chave),prod=idx.get(nk)||idx.get(nk.replace(/^0+/,''))||findProd(chave);
+        if(!prod){semProd++;return;}
+        colF.forEach(({c,f:forn})=>{
+          const v=r[c];if(v===''||v==null)return;
+          const novo=parseFloat(String(v).replace(',','.'));if(isNaN(novo)||novo<0)return;
+          const u=ultimoPrecoForn(prod,forn.id);
+          if(u&&Math.abs(u.preco-novo)<0.00005)return;
+          mudar.push({prod,forn,novo,key:u?u.key:getCod(prod)});prodsTocados.add(prod.id);
+        });
+      });
+      if(!mudar.length){toast('Nenhum preço alterado'+(semProd?' · '+semProd+' linhas sem produto':''),'err');return;}
+      if(!confirm('Registar '+mudar.length+' preço(s) novo(s) em '+prodsTocados.size+' produto(s)?'+(semProd?'\n('+semProd+' linhas ignoradas: chave desconhecida)':'')))return;
+      const data=dataAgora();
+      mudar.forEach(m=>{
+        if(!PRECOS_DB[m.key])PRECOS_DB[m.key]={};
+        if(!PRECOS_DB[m.key][m.forn.id])PRECOS_DB[m.key][m.forn.id]=[];
+        PRECOS_DB[m.key][m.forn.id].push({preco:m.novo,data,prodId:m.prod.id});
+      });
+      salvarPrecos();atualizarStats();if(m2Ativo())renderProdutos();
+      toast('✓ '+mudar.length+' preço(s) importados','ok');
+    }catch(err){console.error(err);toast('Erro a ler o Excel: '+(err.message||err),'err');}
+  };
+  rd.readAsArrayBuffer(f);
+};
 
 // ══ INIT ══
 (async()=>{
