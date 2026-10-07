@@ -498,6 +498,10 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
 .fat-promo input{width:17px;height:17px;accent-color:#a4122f;}
 .fat-cod-inp{width:100%;box-sizing:border-box;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:#1a2340;background:#fff;border:1.5px dashed #a4122f;border-radius:6px;padding:5px 7px;margin-top:4px;outline:none;}
 .fat-sug{margin-top:6px;font-size:11px;font-weight:700;color:#10b981;cursor:pointer;line-height:1.3;}
+.fam-h{margin:8px 0 0 !important;border-left:none !important;border-right:none !important;border-radius:0 !important;justify-content:flex-start !important;}
+.fam-h .fam-seta{display:inline-block;width:18px;font-size:12px;color:var(--a);}
+.encp-q input.encp-qi{width:48px;text-align:center;font-weight:800;font-size:16px;border:1.5px solid #cbd5e1;border-radius:8px;padding:6px 2px;color:#1a2340;background:#fff;font-family:'JetBrains Mono',monospace;outline:none;}
+.encp-q input.encp-qi:focus{border-color:var(--a);}
 </style>
 </head>
 <body>
@@ -1702,7 +1706,7 @@ function _doRenderProdutos(){
     if(FAM_ESTADOS[cat]===undefined)FAM_ESTADOS[cat]=true;
     const aberto=busca?true:!FAM_ESTADOS[cat];
     const ce=cat.replace(/'/g,"\\'");
-    html+=`<div class="fam-h" onclick="toggleFam('${ce}')"><span>${cat} (${prods.length})</span><span>${FAM_ESTADOS[cat]?'▶':'▼'}</span></div>
+    html+=`<div class="fam-h" onclick="toggleFam('${ce}')"><span><span class="fam-seta">${aberto?'▼':'▶'}</span>${cat} (${prods.length})</span></div>
     <div class="fam-c${aberto?'':' hidden'}">`;
     (aberto?prods:[]).forEach(p=>{
       if(PROD_N++>=PROD_LIM){PROD_CORTE=true;return;}
@@ -3635,14 +3639,20 @@ window.addEventListener('beforeunload',function(e){if(_sairOk)return;e.preventDe
 let ENCP={list:[],lim:100};
 function encProdItem(p){
   if(!encForn())return null;
-  const cods=[p.cod,p.ean,p.f].filter(codValido);
-  return (ENCOMENDAS[encForn().id]||[]).find(x=>cods.includes(x.cod))||null;
+  const cods=[p.cod,p.ean,p.f].filter(codValido),arr=ENCOMENDAS[encForn().id]||[];
+  if(!ENCP.pid)ENCP.pid=new Map();
+  // 1.º pelo código; 2.º pelo produto a que o código lido (ex.: 14 dígitos do scan) pertence
+  return arr.find(x=>cods.includes(x.cod))||arr.find(x=>{
+    let id=ENCP.pid.get(x);
+    if(id===undefined){const pr=findProd(x.cod);id=pr?pr.id:null;ENCP.pid.set(x,id);}
+    return id!==null&&id===p.id;
+  })||null;
 }
 function encProdAbrir(){
   if(!encForn()){toast('Selecione primeiro um fornecedor','err');nav('m4');return;}
   if(!DADOS.length){toast('Carregue primeiro o Excel de produtos','err');return;}
   document.getElementById('encp-forn').textContent='Fornecedor: '+encForn().nome;
-  document.getElementById('encp-busca').value='';ENCP.lim=100;
+  document.getElementById('encp-busca').value='';ENCP.lim=100;ENCP.pid=new Map();
   document.getElementById('enc-prod-bg').classList.add('open');
   encProdRender();
 }
@@ -3665,9 +3675,25 @@ function encProdRender(){
     return `<div class="encp-row ${qtd?'sel':''}" id="encp-r-${i}">
       ${img?`<img class="encp-img" loading="lazy" src="${img}" alt="">`:'<div class="encp-img">📦</div>'}
       <div class="encp-info"><div class="encp-nome">${String(p.nome).replace(/</g,'&lt;')}</div><div class="encp-cod">${getCod(p)}<button class="enc-un" id="encp-u-${i}" onclick="encProdUn(${i})" style="display:${qtd?'inline-block':'none'}">${it?(it.un||'CX'):'CX'}</button></div></div>
-      <div class="encp-q"><button onclick="encProdAlt(${i},-1)">−</button><span id="encp-q-${i}">${qtd}</span><button class="mais" onclick="encProdAlt(${i},1)">+</button></div>
+      <div class="encp-q"><button onclick="encProdAlt(${i},-1)">−</button><input class="encp-qi" id="encp-q-${i}" type="number" inputmode="numeric" min="0" value="${qtd}" onclick="this.select()" onchange="encProdSet(${i},this.value)"><button class="mais" onclick="encProdAlt(${i},1)">+</button></div>
     </div>`;
   }).join('')+(lista.length>vis.length?`<button class="fadd" style="margin:6px 0;width:100%" onclick="ENCP.lim+=100;encProdRender()">Mostrar mais (${lista.length-vis.length})…</button>`:'');
+  encProdTotais();
+}
+function encProdSet(i,val){
+  const p=ENCP.list[i];if(!p||!encForn())return;
+  const q=Math.max(0,parseInt(val)||0),fid=encForn().id;
+  if(!ENCOMENDAS[fid])ENCOMENDAS[fid]=[];
+  let it=encProdItem(p);
+  if(!it){if(q<=0)return;ENCOMENDAS[fid].push({cod:getCod(p),nome:p.nome,un:'CX',preco:p.preco||0,qtd:q,imgUrl:getImg(p)});}
+  else if(q<=0)ENCOMENDAS[fid]=ENCOMENDAS[fid].filter(x=>x!==it);
+  else it.qtd=q;
+  salvarEncomendas();atualizarEncBadge();
+  it=encProdItem(p);
+  const sp=document.getElementById('encp-q-'+i),row=document.getElementById('encp-r-'+i),ub=document.getElementById('encp-u-'+i);
+  if(sp)sp.value=it?it.qtd:0;
+  if(row)row.classList.toggle('sel',!!it);
+  if(ub){ub.style.display=it?'inline-block':'none';ub.textContent=it?(it.un||'CX'):'CX';}
   encProdTotais();
 }
 function encProdAlt(i,d){
@@ -3684,7 +3710,7 @@ function encProdAlt(i,d){
   salvarEncomendas();atualizarEncBadge();
   it=encProdItem(p);
   const sp=document.getElementById('encp-q-'+i),row=document.getElementById('encp-r-'+i);
-  if(sp)sp.textContent=it?it.qtd:0;
+  if(sp)sp.value=it?it.qtd:0;
   if(row)row.classList.toggle('sel',!!it);
   const ub=document.getElementById('encp-u-'+i);if(ub){ub.style.display=it?'inline-block':'none';ub.textContent=it?(it.un||'CX'):'CX';}
   encProdTotais();
@@ -3753,10 +3779,12 @@ function precosDoProduto(prod,codItem){
   });
   return porForn;
 }
+const PREF_FORN=['arcol','antonioteixeiralopes','teixeiralopes','recheio','novocash','bisquidoce'];
+function fornPreferido(f){const n=fatSemAcentos(f.nome).replace(/[^a-z0-9]/g,'');return n==='atl'||PREF_FORN.some(k=>n.includes(k));}
 function melhorFornecedor(prod,codItem){
   const pf=precosDoProduto(prod,codItem);let best=null;
   Object.keys(pf).forEach(fid=>{
-    const f=FORNECEDORES.find(x=>String(x.id)===String(fid));if(!f)return;
+    const f=FORNECEDORES.find(x=>String(x.id)===String(fid));if(!f||!fornPreferido(f))return;
     const r=pf[fid];
     if(!best||r.preco<best.preco)best={forn:f,preco:r.preco,data:r.data,promo:r.promo};
   });
@@ -3766,7 +3794,7 @@ function encAgruparMelhor(){
   const items=ENCOMENDAS['melhor']||[],grupos={};
   items.forEach((it,idx)=>{
     const prod=findProd(it.cod)||null,mf=melhorFornecedor(prod,it.cod);
-    const nomeF=mf?mf.forn.nome:'Outros (sem preço registado)',fam=(prod&&prod.cat)||'Sem família';
+    const nomeF=mf?mf.forn.nome:'Outros',fam=(prod&&prod.cat)||'Sem família';
     const g=grupos[nomeF]||(grupos[nomeF]={nome:nomeF,outros:!mf,total:0,fam:{}});
     (g.fam[fam]=g.fam[fam]||[]).push({it,idx,preco:mf?mf.preco:null});
     if(mf)g.total+=mf.preco*it.qtd;
