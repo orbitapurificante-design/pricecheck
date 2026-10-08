@@ -502,6 +502,13 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
 .fam-h .fam-seta{display:inline-block;width:18px;font-size:12px;color:var(--a);}
 .encp-q input.encp-qi{width:48px;text-align:center;font-weight:800;font-size:16px;border:1.5px solid #cbd5e1;border-radius:8px;padding:6px 2px;color:#1a2340;background:#fff;font-family:'JetBrains Mono',monospace;outline:none;}
 .encp-q input.encp-qi:focus{border-color:var(--a);}
+.encm-fam{margin:8px -12px 5px !important;border-radius:0 !important;padding:7px 12px !important;display:flex;align-items:center;gap:6px;cursor:pointer;-webkit-user-select:none;user-select:none;}
+.encm-seta{display:inline-block;width:16px;font-size:12px;color:#a4122f;}
+.encm-cfg-btn{display:block;width:100%;margin-top:8px;padding:9px;border:1.5px solid var(--a);border-radius:10px;background:#fff;color:#1a2340;font-weight:700;font-size:12px;cursor:pointer;font-family:'Inter',sans-serif;}
+.encm-cfg-lista{background:#fff;border-radius:10px;margin-top:6px;padding:6px 12px;text-align:left;max-height:40vh;overflow:auto;}
+.encm-cfg-it{display:flex;align-items:center;gap:10px;padding:9px 2px;font-size:13px;font-weight:600;color:#1a2340;border-bottom:1px solid #eef1f6;cursor:pointer;}
+.encm-cfg-it input{width:20px;height:20px;accent-color:#a4122f;flex-shrink:0;}
+.encm-cfg-nota{font-size:10px;color:#64748b;padding:8px 0 4px;line-height:1.35;}
 </style>
 </head>
 <body>
@@ -766,6 +773,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
   <div class="enc-top" style="display:block !important;text-align:center">
     <div style="text-align:center"><div class="enc-title" style="text-align:center">📦 Encomendas</div><div class="enc-sub" style="text-align:center" id="enc-sub">Leituras para o fornecedor ativo</div></div>
     <div class="enc-modo"><button id="enc-modo-forn" onclick="encSetModo('forn')">Fornecedor</button><button id="enc-modo-melhor" onclick="encSetModo('melhor')">⭐ Melhor fornecedor</button></div>
+    <div id="enc-melhor-cfg" style="display:none"></div>
     <div style="display:flex;justify-content:space-between;gap:10px;margin-top:12px"><button class="enc-scan-btn" style="flex:1;justify-content:center;background:#fff;color:#1a2340;border:1.5px solid var(--a);padding:12px 12px" onclick="encProdAbrir()">📦 PRODUTOS</button><button class="enc-scan-btn" style="flex:1;justify-content:center" onclick="abrirEncScanner()">
       <span style="font-size:17px">📷</span> SCAN
     </button></div>
@@ -2028,6 +2036,7 @@ function salvarEncomendas(){localStorage.setItem('PC_ENC',JSON.stringify(ENCOMEN
 function carregarEncomendas(){try{const d=localStorage.getItem('PC_ENC');if(d)ENCOMENDAS=JSON.parse(d);}catch(e){}}
 
 function atualizarEncHeader(){
+  encRenderCfgMelhor();
   const _bf=document.getElementById('enc-modo-forn'),_bm=document.getElementById('enc-modo-melhor');
   if(_bf){_bf.classList.toggle('on',ENC_MODO!=='melhor');_bm.classList.toggle('on',ENC_MODO==='melhor');}
   const sel=document.getElementById('enc-forn-sel');
@@ -2183,7 +2192,7 @@ function exportarEncomendaExcel(){
   const items=ENCOMENDAS[encForn().id]||[];
   if(!items.length){toast('Encomenda vazia','err');return;}
   if(ENC_MODO==='melhor'){exportarEncomendaMelhorExcel();return;}
-  const hdr=['Código','Produto','Un.','Qtd.','Preço unit. €','Total €'];
+  const hdr=['Código','Produto','Un.','Qtd.','Preço unit. €','Total €','Fornecedor real'];
   const rows=items.map(item=>[
     item.cod,
     item.nome,
@@ -3755,7 +3764,7 @@ var MELHOR={id:'melhor',nome:'⭐ Melhor Fornecedor'};
 function encForn(){return ENC_MODO==='melhor'?MELHOR:FORN_ATIVO;}
 function encSetModo(m){
   ENC_MODO=m;try{localStorage.setItem('PC_ENC_MODO',m);}catch(e){}
-  renderEncomenda();atualizarEncBadge();
+  renderEncomenda();atualizarEncBadge();atualizarEncHeader();
 }
 const escH=t=>String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;');
 function dataParaDate(str){const m=String(str||'').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);return m?new Date(+m[3],+m[2]-1,+m[1]):null;}
@@ -3784,19 +3793,20 @@ function fornPreferido(f){const n=fatSemAcentos(f.nome).replace(/[^a-z0-9]/g,'')
 function melhorFornecedor(prod,codItem){
   const pf=precosDoProduto(prod,codItem);let best=null;
   Object.keys(pf).forEach(fid=>{
-    const f=FORNECEDORES.find(x=>String(x.id)===String(fid));if(!f||!fornPreferido(f))return;
+    const f=FORNECEDORES.find(x=>String(x.id)===String(fid));if(!f)return;
     const r=pf[fid];
     if(!best||r.preco<best.preco)best={forn:f,preco:r.preco,data:r.data,promo:r.promo};
   });
   return best;
 }
 function encAgruparMelhor(){
+  ensureMelhorFlags();
   const items=ENCOMENDAS['melhor']||[],grupos={};
   items.forEach((it,idx)=>{
-    const prod=findProd(it.cod)||null,mf=melhorFornecedor(prod,it.cod);
-    const nomeF=mf?mf.forn.nome:'Outros',fam=(prod&&prod.cat)||'Sem família';
-    const g=grupos[nomeF]||(grupos[nomeF]={nome:nomeF,outros:!mf,total:0,fam:{}});
-    (g.fam[fam]=g.fam[fam]||[]).push({it,idx,preco:mf?mf.preco:null});
+    const prod=findProd(it.cod)||null,mf=melhorFornecedor(prod,it.cod),incl=!!(mf&&mf.forn.melhor===true);
+    const nomeF=incl?mf.forn.nome:'Outros',fam=(prod&&prod.cat)||'Sem família';
+    const g=grupos[nomeF]||(grupos[nomeF]={nome:nomeF,outros:!incl,total:0,fam:{}});
+    (g.fam[fam]=g.fam[fam]||[]).push({it,idx,preco:mf?mf.preco:null,real:(!incl&&mf)?mf.forn.nome:null});
     if(mf)g.total+=mf.preco*it.qtd;
   });
   const lista=Object.values(grupos).sort((a,b)=>(a.outros-b.outros)||a.nome.localeCompare(b.nome,'pt'));
@@ -3808,7 +3818,7 @@ function encCardMelhor(r){
   const imgHtml=img?`<img src="${img}" class="enc-item-img" onerror="this.outerHTML='<div class=enc-item-img-e>📦</div>'">`:`<div class="enc-item-img-e">📦</div>`;
   return `<div class="enc-item"><div class="enc-item-row">${imgHtml}
     <div class="enc-item-info"><div class="enc-item-nome">${escH(it.nome)}</div>
-      <div class="enc-item-cod">${escH(it.cod)}<button class="enc-un" onclick="encToggleUn(${idx})">${it.un||'CX'}</button>${r.preco!=null?`<span class="enc-pr">${r.preco.toFixed(2)}€</span>`:'<span class="enc-pr sem">sem preço</span>'}<button class="enc-item-del" onclick="encApagarItem(${idx})" title="Remover">✕</button></div></div>
+      <div class="enc-item-cod">${escH(it.cod)}<button class="enc-un" onclick="encToggleUn(${idx})">${it.un||'CX'}</button>${r.preco!=null?`<span class="enc-pr">${r.real?escH(r.real)+' · ':''}${r.preco.toFixed(2)}€</span>`:'<span class="enc-pr sem">sem preço</span>'}<button class="enc-item-del" onclick="encApagarItem(${idx})" title="Remover">✕</button></div></div>
     <div class="enc-item-qtd-wrap"><button class="enc-qtd-btn" onclick="encAlterarQtd(${idx},-1)">−</button><input class="enc-qtd-inp" type="number" min="1" value="${it.qtd}" onchange="encSetQtd(${idx},this.value)" onclick="this.select()"><button class="enc-qtd-btn" onclick="encAlterarQtd(${idx},1)">+</button></div>
   </div></div>`;
 }
@@ -3818,7 +3828,10 @@ function renderEncomendaMelhor(wrap,items){
   let html='<div class="enc-list">';
   grupos.forEach(g=>{
     html+=`<div class="encm-forn"><span>${g.outros?'❔':'🏭'} ${escH(g.nome)}</span><b>${g.total>0?g.total.toFixed(2)+'€':''}</b></div>`;
-    g.famKeys.forEach(fk=>{html+=`<div class="encm-fam">${escH(fk)}</div>`+g.fam[fk].map(encCardMelhor).join('');});
+    g.famKeys.forEach(fk=>{
+      const chave=g.nome+'|'+fk,fech=ENCM_FECH.has(chave),n=g.fam[fk].length;
+      html+=`<div class="encm-fam" data-k="${encodeURIComponent(chave)}" onclick="encmToggleFam(this)"><span class="encm-seta">${fech?'▶':'▼'}</span>${escH(fk)} (${n})</div>`+(fech?'':g.fam[fk].map(encCardMelhor).join(''));
+    });
   });
   html+='</div>';
   html+=`<div class="enc-total"><div><div class="enc-total-lbl">Total unidades</div><div style="font-size:11px;color:var(--muted);margin-top:2px">${items.length} artigo(s) · ${grupos.length} fornecedor(es)</div></div><div class="enc-total-val">${totalUnd} und.</div></div>`;
@@ -3838,7 +3851,7 @@ function imprimirEncomendaMelhor(){
     corpo+=`<h2>${escH(g.nome)}<span>${und} und.${g.total>0?' · '+g.total.toFixed(2)+'€':''}</span></h2><table><thead><tr><th>Produto</th><th>Código</th><th>Un.</th><th style="text-align:center">Qtd.</th><th style="text-align:right">Preço unit.</th><th style="text-align:right">Total</th></tr></thead><tbody>`;
     g.famKeys.forEach(fk=>{
       corpo+=`<tr class="fam"><td colspan="6">${escH(fk)}</td></tr>`;
-      g.fam[fk].forEach((r,i)=>{corpo+=`<tr><td class="n">${escH(r.it.nome)}</td><td class="c">${escH(r.it.cod)}</td><td style="text-align:center">${r.it.un||'CX'}</td><td class="q">${r.it.qtd}</td><td style="text-align:right">${r.preco!=null?r.preco.toFixed(2)+'€':'—'}</td><td style="text-align:right;font-weight:700">${r.preco!=null?(r.preco*r.it.qtd).toFixed(2)+'€':'—'}</td></tr>`;});
+      g.fam[fk].forEach((r,i)=>{corpo+=`<tr><td class="n">${escH(r.it.nome)}${r.real?'<br><small style="font-weight:400;color:#666">'+escH(r.real)+'</small>':''}</td><td class="c">${escH(r.it.cod)}</td><td style="text-align:center">${r.it.un||'CX'}</td><td class="q">${r.it.qtd}</td><td style="text-align:right">${r.preco!=null?r.preco.toFixed(2)+'€':'—'}</td><td style="text-align:right;font-weight:700">${r.preco!=null?(r.preco*r.it.qtd).toFixed(2)+'€':'—'}</td></tr>`;});
     });
     corpo+='</tbody></table>';
   });
@@ -3865,7 +3878,7 @@ function exportarEncomendaMelhorExcel(){
   const items=ENCOMENDAS['melhor']||[];
   if(!items.length){toast('Encomenda vazia','err');return;}
   const rows=[];
-  encAgruparMelhor().forEach(g=>g.famKeys.forEach(fk=>g.fam[fk].forEach(r=>rows.push([g.nome,fk,r.it.cod,r.it.nome,r.it.un||'CX',r.it.qtd,r.preco!=null?Number(r.preco.toFixed(2)):'',r.preco!=null?Number((r.preco*r.it.qtd).toFixed(2)):'']))));
+  encAgruparMelhor().forEach(g=>g.famKeys.forEach(fk=>g.fam[fk].forEach(r=>rows.push([g.nome,fk,r.it.cod,r.it.nome,r.it.un||'CX',r.it.qtd,r.preco!=null?Number(r.preco.toFixed(2)):'',r.preco!=null?Number((r.preco*r.it.qtd).toFixed(2)):'',r.real||'']))));
   const ws=XLSX.utils.aoa_to_sheet([['Fornecedor','Família','Código','Produto','Un.','Qtd.','Preço unit. €','Total €'],...rows]);
   ws['!cols']=[{wch:26},{wch:18},{wch:14},{wch:34},{wch:6},{wch:7},{wch:13},{wch:11}];
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Melhor fornecedor');
@@ -3950,6 +3963,27 @@ document.getElementById('f-precos-xlsx').onchange=function(e){
   };
   rd.readAsArrayBuffer(f);
 };
+
+
+var ENCM_FECH=new Set(),ENCM_CFG_ABERTO=false;
+function encmToggleFam(el){const k=decodeURIComponent(el.dataset.k);ENCM_FECH.has(k)?ENCM_FECH.delete(k):ENCM_FECH.add(k);renderEncomenda();}
+// primeira vez: marca com visto os fornecedores habituais; depois escolhe-se à mão
+function ensureMelhorFlags(){
+  if(FORNECEDORES.length&&FORNECEDORES.every(f=>f.melhor===undefined)){FORNECEDORES.forEach(f=>{f.melhor=fornPreferido(f);});salvarForn();}
+}
+function encRenderCfgMelhor(){
+  const el=document.getElementById('enc-melhor-cfg');if(!el)return;
+  if(ENC_MODO!=='melhor'){el.style.display='none';return;}
+  ensureMelhorFlags();
+  const n=FORNECEDORES.filter(f=>f.melhor===true).length;
+  el.style.display='block';
+  el.innerHTML=`<button class="encm-cfg-btn" onclick="ENCM_CFG_ABERTO=!ENCM_CFG_ABERTO;encRenderCfgMelhor()">🏭 Fornecedores incluídos (${n}/${FORNECEDORES.length}) ${ENCM_CFG_ABERTO?'▲':'▼'}</button>`+
+    (ENCM_CFG_ABERTO?`<div class="encm-cfg-lista">${FORNECEDORES.map(f=>`<label class="encm-cfg-it"><input type="checkbox" ${f.melhor===true?'checked':''} onchange="encMelhorTick(${f.id},this.checked)"> ${escH(f.nome)}</label>`).join('')}<div class="encm-cfg-nota">Com visto: aparecem com o seu nome. Sem visto: contam como «Outros» (os produtos entram na mesma na encomenda).</div></div>`:'');
+}
+function encMelhorTick(id,v){
+  const f=FORNECEDORES.find(x=>String(x.id)===String(id));if(!f)return;
+  f.melhor=!!v;salvarForn();encRenderCfgMelhor();renderEncomenda();
+}
 
 // ══ INIT ══
 (async()=>{
