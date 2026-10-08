@@ -509,6 +509,12 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
 .encm-cfg-it{display:flex;align-items:center;gap:10px;padding:9px 2px;font-size:13px;font-weight:600;color:#1a2340;border-bottom:1px solid #eef1f6;cursor:pointer;}
 .encm-cfg-it input{width:20px;height:20px;accent-color:#a4122f;flex-shrink:0;}
 .encm-cfg-nota{font-size:10px;color:#64748b;padding:8px 0 4px;line-height:1.35;}
+.encp-img,.enc-item-img{object-fit:contain !important;background:#fff !important;border:1px solid #eef1f6 !important;padding:1px;box-sizing:border-box;}
+/* comparativo: nome do produto 2-3× mais largo (2 linhas) e % por baixo do preço */
+.ctable th:first-child{min-width:190px;}
+.ctable td.ctd-n{min-width:190px !important;max-width:240px !important;white-space:normal !important;overflow:visible !important;text-overflow:clip !important;}
+.ctd-nm{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.25;font-weight:600;}
+.ctable .cvar{display:block !important;margin:1px 0 0 0 !important;font-size:10px;line-height:1.1;}
 </style>
 </head>
 <body>
@@ -1135,6 +1141,7 @@ async function enviarParaGitHub(silencioso){
 }
 
 async function atualizarDoGitHub(silencioso){
+  setTimeout(()=>{try{unificarChavesPrecos();}catch(e){}},4000);
   if(!GIT_CFG.rawUrl){
     if(!silencioso){toast('Configura o URL Raw primeiro','err');abrirConfigGit();}
     return false;
@@ -1300,6 +1307,34 @@ function getImg(p){
 function codValido(c){c=String(c==null?'':c).trim();return c.length>1&&!/^(x+|0+|-+|_+|\.+|n\/?a|s\/?c)$/i.test(c);}
 function getCod(p){return [p.cod,p.ean,p.f].map(c=>String(c==null?'':c).trim()).find(codValido)||String(p.id);}
 // limpeza: remove registos guardados sob códigos inválidos (ex.: "X" misturava produtos) e duplicados exatos
+function unificarChavesPrecos(){
+  let mudou=false;
+  const idx=idxProdutos(),porProd=new Map();
+  Object.keys(PRECOS_DB).forEach(k=>{
+    const nk=fatNorm(k),pr=idx.get(nk)||idx.get(nk.replace(/^0+/,''));
+    if(!pr)return;
+    if(!porProd.has(pr.id))porProd.set(pr.id,{pr,keys:[]});
+    porProd.get(pr.id).keys.push(k);
+  });
+  porProd.forEach(({pr,keys})=>{
+    const canon=getCod(pr);
+    if(keys.length===1&&keys[0]===canon)return;
+    const alvo=PRECOS_DB[canon]||(PRECOS_DB[canon]={});
+    keys.forEach(k=>{
+      if(k===canon)return;
+      const o=PRECOS_DB[k]||{};
+      Object.keys(o).forEach(fid=>{(alvo[fid]=alvo[fid]||[]).push(...(o[fid]||[]));});
+      delete PRECOS_DB[k];
+    });
+    Object.keys(alvo).forEach(fid=>{
+      const vistos=new Set();
+      alvo[fid]=alvo[fid].map((e,i)=>({e,i,t:dataHora(e.data)})).sort((a,b)=>a.t-b.t||a.i-b.i).map(x=>x.e)
+        .filter(e=>{const c=parseFloat(e.preco)+'|'+e.data;if(vistos.has(c))return false;vistos.add(c);return true;});
+    });
+    mudou=true;
+  });
+  if(mudou)salvarPrecos();
+}
 function limparPrecosInvalidos(){
   let inv=0,dup=0;
   try{localStorage.setItem('PC_PREC_BKP',localStorage.getItem('PC_PREC')||'{}');}catch(e){}
@@ -1497,7 +1532,7 @@ function confirmarEntradaManual(){
 function processarCodigo(codigo){
   COD_ATUAL=codigo;
   const prod=findProd(codigo);
-  if(prod&&/^\d{14}$/.test(codigo))COD_ATUAL=getCod(prod);   // preço fica ligado ao produto, não ao código da caixa
+  if(prod)COD_ATUAL=getCod(prod);   // o preço fica sempre ligado ao produto (chave única)
   if(prod){
     mostrarProdModal(prod);
   }else{
@@ -1516,6 +1551,7 @@ function processarCodigo(codigo){
 
 // ══ MODAL PRODUTO ══
 function mostrarProdModal(prod){
+  if(prod)COD_ATUAL=getCod(prod);
   if(!prod)return;
   const cod=getCod(prod);
   const imgUrl=getImg(prod);
@@ -1778,14 +1814,14 @@ function renderComparativo(){
     let dc='';if(diff!=null){if(diff>1)dc='g';else if(diff>0.2)dc='m';else dc='p';}
     const ce=cod.replace(/'/g,"\\'");
     html+=`<tr class="cr" onclick="mostrarProdModal(DADOS.find(x=>getCod(x)==='${ce}')||null)">
-      <td class="ctd-n" title="${np}">${np}</td>
+      <td class="ctd-n" title="${np}"><div class="ctd-nm">${np}</div></td>
       <td style="white-space:nowrap" class="cmono">${pr>0?pr.toFixed(2)+'€':'—'}</td>
       ${ppf.map(item=>{
         if(!item)return'<td style="color:var(--muted);text-align:center">—</td>';
         const p=item.preco;
         const ib=p===minP&&vals.length>1,iw=p===maxP&&vals.length>1;
         let vp='';
-        if(pr>0){const d=p-pr;const pc=((d/pr)*100).toFixed(0);if(Math.abs(d)>0.005)vp=`<span class="cvar ${d<0?'cv-p':'cv-n'}" style="margin-left:3px">${d>0?'+':''}${pc}%</span>`;}
+        if(pr>0){const d=p-pr;const pc=((d/pr)*100).toFixed(0);if(Math.abs(d)>0.005)vp=`<span class="cvar ${d<0?'cv-p':'cv-n'}" >${d>0?'+':''}${pc}%</span>`;}
         return`<td style="white-space:nowrap"><span class="cmono ${ib?'cbest':iw?'cworst':''}">${p.toFixed(2)}€</span>${vp}</td>`;
       }).join('')}
       <td>${diff!=null&&vals.length>1?`<span class="cdiff ${dc}">${diff.toFixed(2)}€</span>`:'—'}</td>
@@ -3993,7 +4029,7 @@ function encMelhorTick(id,v){
 (async()=>{
   await abrirImgDB();
   setTimeout(carregarImgsBackground,300);
-  carregar();limparPrecosInvalidos();carregarEncomendas();atualizarHeaderForn();atualizarStats();
+  carregar();limparPrecosInvalidos();try{unificarChavesPrecos();}catch(e){console.error(e);}carregarEncomendas();atualizarHeaderForn();atualizarStats();
   carregarConfigGit();atualizarGitStatus();
   if(GIT_CFG.rawUrl)atualizarDoGitHub(true);
   if(GIT_CFG.produtosRawUrl)atualizarProdutosDoGitHub(true);
