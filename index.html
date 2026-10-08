@@ -1069,26 +1069,34 @@ function guardarConfigGit(){
 function importarPayloadJSON(jsonStr, silencioso){
   const data=JSON.parse(jsonStr);
   if(!data.precos)throw new Error('Ficheiro inválido');
+  const nn=t=>fatSemAcentos(String(t||'')).replace(/[^a-z0-9]/g,'');
   let fornAdded=0;
-  if(data.fornecedores&&Array.isArray(data.fornecedores)){
+  const mapa={},temLista=Array.isArray(data.fornecedores);
+  if(temLista){
+    // os preços vêm ligados ao id do fornecedor DE ORIGEM; liga-se pelo NOME ao fornecedor local
     data.fornecedores.forEach(f=>{
-      const existe=FORNECEDORES.find(x=>String(x.id)===String(f.id)||x.nome===f.nome);
-      if(!existe){FORNECEDORES.push(f);fornAdded++;}
+      let loc=FORNECEDORES.find(x=>nn(x.nome)===nn(f.nome));
+      if(!loc){
+        const usado=FORNECEDORES.some(x=>String(x.id)===String(f.id));
+        loc=Object.assign({},f,{id:usado?FORN_NEXT_ID++:f.id});
+        if(!usado&&Number(f.id)>=FORN_NEXT_ID)FORN_NEXT_ID=Number(f.id)+1;
+        FORNECEDORES.push(loc);fornAdded++;
+      }
+      mapa[String(f.id)]=loc.id;
     });
     if(fornAdded){localStorage.setItem('PC_FORN',JSON.stringify(FORNECEDORES));localStorage.setItem('PC_NID',String(FORN_NEXT_ID));}
   }
   let precosAdded=0;
   Object.keys(data.precos).forEach(cod=>{
-    if(!PRECOS_DB[cod])PRECOS_DB[cod]={};
     Object.keys(data.precos[cod]).forEach(fid=>{
-      if(!PRECOS_DB[cod][fid])PRECOS_DB[cod][fid]=[];
-      const existentes=PRECOS_DB[cod][fid].map(x=>x.data+'|'+x.preco);
+      let lid=fid;
+      if(temLista){if(!(fid in mapa))return;lid=mapa[fid];}   // preço de fornecedor desconhecido: ignora
+      if(!PRECOS_DB[cod])PRECOS_DB[cod]={};
+      if(!PRECOS_DB[cod][lid])PRECOS_DB[cod][lid]=[];
+      const existentes=new Set(PRECOS_DB[cod][lid].map(x=>x.data+'|'+x.preco));
       data.precos[cod][fid].forEach(entrada=>{
         const key=entrada.data+'|'+entrada.preco;
-        if(!existentes.includes(key)){
-          PRECOS_DB[cod][fid].push(entrada);
-          precosAdded++;
-        }
+        if(!existentes.has(key)){PRECOS_DB[cod][lid].push(entrada);existentes.add(key);precosAdded++;}
       });
     });
   });
