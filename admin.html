@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>PriceCheck</title>
+<title>PriceCheck Pro</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#1a2340">
-<link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-title" content="PriceCheck">
+<link rel="manifest" href="manifest-admin.json">
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -527,13 +527,14 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
   <div class="hrow1">
     <button class="hmenu" onclick="toggleDrawer()">&#9776;</button>
     <div class="hlogo">Price<span>Check</span> · Pro</div>
-        <span class="hdate" id="hdate"></span>
+    <span id="git-status-dot" title="GitHub" style="width:8px;height:8px;border-radius:50%;background:#7a8fba;margin-left:8px;flex-shrink:0;" onclick="abrirConfigGit()"></span>
+    <span class="hdate" id="hdate"></span>
   </div>
   <div class="hrow2">
-    <div class="hforn ativo" id="hforn" onclick="atualizarDoGitHub();atualizarProdutosDoGitHub()">
+    <div class="hforn sem" id="hforn" onclick="irParaFornecedores()">
       <div class="hforn-dot"></div>
-      <span class="hforn-nome" id="hforn-nome">A atualizar…</span>
-      <span style="font-size:13px;opacity:.6">↻</span>
+      <span class="hforn-nome" id="hforn-nome">Selecionar fornecedor</span>
+      <span style="font-size:9px;opacity:0.4">▼</span>
     </div>
   </div>
 </header>
@@ -546,13 +547,26 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
   </div>
   <div class="drawer-body">
     <div class="dsep">Dados</div>
-    <button class="dbtn dbtn-p" onclick="atualizarDoGitHub();atualizarProdutosDoGitHub();fecharTudo()">🔄 Atualizar preços e produtos</button>
-    <button class="dbtn dbtn-s" onclick="document.getElementById('f-excel').click();fecharTudo()">📊 Carregar Excel de Produtos</button>
+    <button class="dbtn dbtn-p" onclick="abrirFatura();fecharTudo()">🧾 Ler Fatura (foto)</button>
+    <button class="dbtn dbtn-p" onclick="document.getElementById('f-excel').click();fecharTudo()">📊 Carregar Excel de Produtos</button>
+    <button class="dbtn dbtn-s" onclick="atualizarProdutosDoGitHub();fecharTudo()">⬇️ Atualizar Produtos do GitHub</button>
     <button class="dbtn dbtn-s" onclick="document.getElementById('f-fotos').click();fecharTudo()">🖼️ Carregar Fotos dos Produtos</button>
     <button class="dbtn dbtn-s" onclick="document.getElementById('f-fotos-json').click();fecharTudo()">📥 Importar cópia das fotos (JSON)</button>
+    <div class="dsep">GitHub (automático)</div>
+    <button class="dbtn dbtn-p" onclick="enviarParaGitHub();fecharTudo()">⬆️ Enviar preços para GitHub</button>
+    <button class="dbtn dbtn-s" onclick="atualizarDoGitHub();fecharTudo()">⬇️ Atualizar preços do GitHub</button>
+    <button class="dbtn dbtn-s" onclick="abrirConfigGit();fecharTudo()">☁️ Configurar GitHub</button>
+    <div class="dsep">Sincronizar manualmente</div>
+    <button class="dbtn dbtn-p" onclick="exportarJSON();fecharTudo()">📤 Exportar Preços (JSON)</button>
+    <button class="dbtn dbtn-s" onclick="exportarEWhatsApp();fecharTudo()">💬 Exportar + Enviar WhatsApp</button>
+    <button class="dbtn dbtn-s" onclick="document.getElementById('f-import').click();fecharTudo()">📥 Importar Preços (JSON)</button>
     <div class="dsep">Exportar</div>
     <button class="dbtn dbtn-s" onclick="exportarComparativo();fecharTudo()">📊 Exportar Comparativo Excel</button>
     <button class="dbtn dbtn-s" onclick="exportarHistorico();fecharTudo()">📋 Exportar Histórico Excel</button>
+    <button class="dbtn dbtn-s" onclick="exportarPrecosExcel();fecharTudo()">📤 Exportar preços (Excel para editar)</button>
+    <button class="dbtn dbtn-s" onclick="document.getElementById('f-precos-xlsx').click();fecharTudo()">📥 Importar preços (Excel editado)</button>
+    <div class="dsep">Sistema</div>
+    <button class="dbtn dbtn-d" onclick="if(confirm('Apagar TODOS os preços?')){PRECOS_DB={};salvarPrecos();atualizarStats();toast('Preços apagados','ok');fecharTudo();}">🗑️ Limpar Todos os Preços</button>
   </div>
   <input type="file" id="f-excel" accept=".xlsx,.xls,.csv" style="display:none">
   <input type="file" id="f-fotos" multiple accept="image/*" style="display:none">
@@ -719,13 +733,16 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
       <button class="scan-sub-btn" onclick="abrirEntradaManual()"><span>🔢</span> MANUAL</button>
       <button class="scan-sub-btn" onclick="document.getElementById('f-excel').click()"><span>📊</span> EXCEL</button>
     </div>
-      </div>
+    <div class="scan-sub-row" style="padding-top:0">
+      <button class="scan-sub-btn" style="border-style:solid;border-color:rgba(201,168,76,.45);color:var(--a)" onclick="abrirFatura()"><span>🧾</span> LER FATURA (FOTO)</button>
+    </div>
+  </div>
 
 
   <!-- Stats -->
   <div class="stat-grid">
     <div class="stat-c"><div class="stat-n" id="s-prod">0</div><div class="stat-l">Produtos</div></div>
-    <div class="stat-c" style="display:none"><div class="stat-n" id="s-forn">0</div><div class="stat-l">Fornecedores</div></div>
+    <div class="stat-c"><div class="stat-n" id="s-forn">0</div><div class="stat-l">Fornecedores</div></div>
     <div class="stat-c"><div class="stat-n" id="s-prec" style="font-size:15px">0</div><div class="stat-l" style="font-size:9px;line-height:1.2">Preços / Prod. c/ preço</div></div>
     <div class="stat-c"><div class="stat-n" id="s-hoje">0</div><div class="stat-l">Hoje</div></div>
   </div>
@@ -753,7 +770,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
 
 <!-- FORNECEDORES -->
 <div class="screen" id="m4">
-  <div class="ftop"><div class="frow"><div class="ftitle">Escolher fornecedor</div></div><div class="fsub">Para a encomenda</div></div>
+  <div class="ftop"><div class="frow"><div class="ftitle">Fornecedores</div><button class="fnovo" onclick="abrirFornModal()">+ novo</button></div><div class="fsub">Selecione o fornecedor ativo para registar preços</div></div>
   <div class="flist" id="forn-list"></div>
 </div>
 
@@ -770,7 +787,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
   <div class="enc-forn-sel sem" id="enc-forn-sel">
     <div class="enc-forn-dot"></div>
     <span id="enc-forn-nome">Nenhum fornecedor selecionado</span>
-    <button onclick="irParaFornecedores()" style="margin-left:auto;background:var(--s2);border:1px solid var(--bd);color:var(--muted);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'Inter',sans-serif;">Selecionar</button>
+    <button onclick="nav('m4')" style="margin-left:auto;background:var(--s2);border:1px solid var(--bd);color:var(--muted);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'Inter',sans-serif;">Selecionar</button>
   </div>
   <div id="enc-lista-wrap">
     <div class="enc-empty">
@@ -910,7 +927,11 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
     <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
     RELATÓRIO
   </button>
-    <button class="bnav-btn" id="nb-m5" onclick="nav('m5')">
+  <button class="bnav-btn" id="nb-m4" onclick="nav('m4')">
+    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    FORNECEDORES
+  </button>
+  <button class="bnav-btn" id="nb-m5" onclick="nav('m5')">
     <svg viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
     ENCOMENDAS
   </button>
@@ -920,7 +941,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
 // ══ ESTADO ══
 // ══ INDEXEDDB PARA FOTOS (persistência entre sessões) ══
 let IMGS=new Map();
-const IMG_DB_NAME='PriceCheckImgsV',IMG_STORE='fotos';
+const IMG_DB_NAME='PriceCheckImgs',IMG_STORE='fotos';
 let imgDB=null;
 async function abrirImgDB(){
   return new Promise((res,rej)=>{
@@ -965,24 +986,24 @@ let COD_ATUAL=null,FORN_EDIT_ID=null,COMP_CAT='todos',FORN_NEXT_ID=Date.now();
 
 // ══ PERSISTÊNCIA ══
 function carregar(){
-  try{const d=localStorage.getItem('PCV_PROD');if(d)DADOS=JSON.parse(d);}catch(e){}
-  try{const d=localStorage.getItem('PCV_FORN');if(d)FORNECEDORES=JSON.parse(d);}catch(e){}
-  try{const d=localStorage.getItem('PCV_FA');if(d)FORN_ATIVO=JSON.parse(d);}catch(e){}
-  try{const d=localStorage.getItem('PCV_PREC');if(d)PRECOS_DB=JSON.parse(d);}catch(e){}
-  try{const d=localStorage.getItem('PCV_VISTOS');if(d)VISTOS=JSON.parse(d);}catch(e){}
-  try{const d=localStorage.getItem('PCV_NID');if(d)FORN_NEXT_ID=parseInt(d);}catch(e){}
+  try{const d=localStorage.getItem('PC_PROD');if(d)DADOS=JSON.parse(d);}catch(e){}
+  try{const d=localStorage.getItem('PC_FORN');if(d)FORNECEDORES=JSON.parse(d);}catch(e){}
+  try{const d=localStorage.getItem('PC_FA');if(d)FORN_ATIVO=JSON.parse(d);}catch(e){}
+  try{const d=localStorage.getItem('PC_PREC');if(d)PRECOS_DB=JSON.parse(d);}catch(e){}
+  try{const d=localStorage.getItem('PC_VISTOS');if(d)VISTOS=JSON.parse(d);}catch(e){}
+  try{const d=localStorage.getItem('PC_NID');if(d)FORN_NEXT_ID=parseInt(d);}catch(e){}
 }
-function salvarForn(){localStorage.setItem('PCV_FORN',JSON.stringify(FORNECEDORES));localStorage.setItem('PCV_NID',String(FORN_NEXT_ID));marcarSyncPendente();}
-function salvarPrecos(){localStorage.setItem('PCV_PREC',JSON.stringify(PRECOS_DB));marcarSyncPendente();}
-function salvarVistos(){localStorage.setItem('PCV_VISTOS',JSON.stringify(VISTOS));}
+function salvarForn(){localStorage.setItem('PC_FORN',JSON.stringify(FORNECEDORES));localStorage.setItem('PC_NID',String(FORN_NEXT_ID));marcarSyncPendente();}
+function salvarPrecos(){localStorage.setItem('PC_PREC',JSON.stringify(PRECOS_DB));marcarSyncPendente();}
+function salvarVistos(){localStorage.setItem('PC_VISTOS',JSON.stringify(VISTOS));}
 function toggleVisto(cod,checked){
   VISTOS[cod]=!!checked;
   salvarVistos();
 }
-function salvarFornAtivo(){localStorage.setItem('PCV_FA',JSON.stringify(FORN_ATIVO));}
+function salvarFornAtivo(){localStorage.setItem('PC_FA',JSON.stringify(FORN_ATIVO));}
 
 // ══ GITHUB SYNC (base partilhada — offline-first, sincroniza sozinho quando há net) ══
-const GIT_CFG_KEY='PCV_GITCFG';
+const GIT_CFG_KEY='PC_GITCFG';
 let GIT_CFG={proxy:'',owner:'orbitapurificante-design',repo:'pricecheck',path:'dados-precos.json',branch:'main',rawUrl:'https://raw.githubusercontent.com/orbitapurificante-design/pricecheck/main/dados-precos.json',produtosRawUrl:'https://raw.githubusercontent.com/orbitapurificante-design/pricecheck/main/produtos.xlsx'};
 let gitSyncPendente=false;
 let _gitPushTimer=null;
@@ -994,13 +1015,13 @@ function carregarConfigGit(){
     if(!GIT_CFG.produtosRawUrl)GIT_CFG.produtosRawUrl=base+'produtos.xlsx';
     if(!GIT_CFG.rawUrl&&GIT_CFG.path)GIT_CFG.rawUrl=base+GIT_CFG.path;
   }
-  try{gitSyncPendente=localStorage.getItem('PCV_GIT_PENDENTE')==='1';}catch(e){}
+  try{gitSyncPendente=localStorage.getItem('PC_GIT_PENDENTE')==='1';}catch(e){}
 }
 function guardarConfigGitState(){localStorage.setItem(GIT_CFG_KEY,JSON.stringify(GIT_CFG));}
 
 function marcarSyncPendente(){
   gitSyncPendente=true;
-  localStorage.setItem('PCV_GIT_PENDENTE','1');
+  localStorage.setItem('PC_GIT_PENDENTE','1');
   atualizarGitStatus();
   clearTimeout(_gitPushTimer);
   _gitPushTimer=setTimeout(()=>{ if(navigator.onLine) enviarParaGitHub(true); }, 4000);
@@ -1063,7 +1084,7 @@ function importarPayloadJSON(jsonStr, silencioso){
       }
       mapa[String(f.id)]=loc.id;
     });
-    if(fornAdded){localStorage.setItem('PCV_FORN',JSON.stringify(FORNECEDORES));localStorage.setItem('PCV_NID',String(FORN_NEXT_ID));}
+    if(fornAdded){localStorage.setItem('PC_FORN',JSON.stringify(FORNECEDORES));localStorage.setItem('PC_NID',String(FORN_NEXT_ID));}
   }
   let precosAdded=0;
   Object.keys(data.precos).forEach(cod=>{
@@ -1079,7 +1100,7 @@ function importarPayloadJSON(jsonStr, silencioso){
       });
     });
   });
-  localStorage.setItem('PCV_PREC',JSON.stringify(PRECOS_DB));
+  localStorage.setItem('PC_PREC',JSON.stringify(PRECOS_DB));
   atualizarStats();
   if(!silencioso)toast('✓ Merge: +'+precosAdded+' preços, +'+fornAdded+' fornecedores','ok');
   return {precosAdded,fornAdded};
@@ -1095,6 +1116,10 @@ async function enviarParaGitHub(silencioso){
     return false;
   }
   try{
+    if(localStorage.getItem('PC_SYNCED')!=='1'&&GIT_CFG.rawUrl){   // dados locais novos/limpos: recupera antes de gravar
+      try{const rr=await fetch(GIT_CFG.rawUrl+'?t='+Date.now(),{cache:'no-store'});if(rr.ok)importarPayloadJSON(await rr.text(),true);else if(rr.status!==404)throw new Error('GitHub '+rr.status);}
+      catch(e2){if(!silencioso)toast('Não consegui recuperar a base antes de enviar: '+e2.message,'err');return false;}
+    }
     const payload=gerarPayloadJSON();
     const base64=btoa(unescape(encodeURIComponent(payload)));
     if(GIT_CFG.token){   // gravação direta na API do GitHub
@@ -1117,7 +1142,7 @@ async function enviarParaGitHub(silencioso){
       if(!resp.ok)throw new Error((json&&(json.error&&json.error.message||json.error))||'Falha ao gravar');
     }
     gitSyncPendente=false;
-    localStorage.setItem('PCV_GIT_PENDENTE','0');
+    localStorage.setItem('PC_GIT_PENDENTE','0');localStorage.setItem('PC_SYNCED','1');
     atualizarGitStatus();
     if(!silencioso)toast('✓ Sincronizado com o GitHub','ok');
     return true;
@@ -1148,6 +1173,7 @@ async function atualizarDoGitHub(silencioso){
     if(!resp.ok)throw new Error('Ficheiro ainda não existe no GitHub (envia primeiro uma vez)');
     const txt=await resp.text();
     importarPayloadJSON(txt, silencioso);
+    localStorage.setItem('PC_SYNCED','1');
     if(!silencioso)toast('✓ Atualizado a partir do GitHub','ok');
     return true;
   }catch(err){
@@ -1196,7 +1222,7 @@ function processarWorkbookProdutos(wb, silencioso){
     un:String(r[5]||r[6]||'').trim(),cat:String(r[8]||'GERAL').toUpperCase().trim(),
     f:String(r[10]||'').trim(),
   })).filter(p=>p.nome);
-  localStorage.setItem('PCV_PROD',JSON.stringify(DADOS));
+  localStorage.setItem('PC_PROD',JSON.stringify(DADOS));
   atualizarStats();
   if(!silencioso)toast('✓ '+DADOS.length+' produtos carregados','ok');
   if(typeof m2Ativo==='function'&&m2Ativo())renderProdutos();
@@ -1231,13 +1257,13 @@ async function atualizarProdutosDoGitHub(silencioso){
     const buf=new Uint8Array(await resp.arrayBuffer());
     let h=2166136261;for(let i=0;i<buf.length;i++){h^=buf[i];h=Math.imul(h,16777619)>>>0;}
     const assinatura=buf.length+':'+h;
-    if(localStorage.getItem('PCV_PROD_HASH')===assinatura&&DADOS.length){
+    if(localStorage.getItem('PC_PROD_HASH')===assinatura&&DADOS.length){
       if(!silencioso)toast('✓ Produtos já estão atualizados ('+DADOS.length+')','ok');
       return true;
     }
     const wb=XLSX.read(buf,{type:'array'});
     processarWorkbookProdutos(wb,true);
-    localStorage.setItem('PCV_PROD_HASH',assinatura);
+    localStorage.setItem('PC_PROD_HASH',assinatura);
     toast('✓ '+DADOS.length+' produtos atualizados do GitHub','ok');
     return true;
   }catch(err){
@@ -1324,7 +1350,7 @@ function unificarChavesPrecos(){
 }
 function limparPrecosInvalidos(){
   let inv=0,dup=0;
-  try{localStorage.setItem('PCV_PREC_BKP',localStorage.getItem('PCV_PREC')||'{}');}catch(e){}
+  try{localStorage.setItem('PC_PREC_BKP',localStorage.getItem('PC_PREC')||'{}');}catch(e){}
   Object.keys(PRECOS_DB).forEach(k=>{
     if(!codValido(k)){Object.values(PRECOS_DB[k]).forEach(h=>inv+=(h||[]).length);delete PRECOS_DB[k];return;}
     Object.keys(PRECOS_DB[k]).forEach(fid=>{
@@ -1527,7 +1553,11 @@ function processarCodigo(codigo){
     if(pf&&Object.keys(pf).length>0&&!FORN_ATIVO){
       mostrarCompBarras(codigo,pf);
     }else{
-      toast('Produto não encontrado: '+codigo,'err');
+      document.getElementById('nmodal-cod').textContent=codigo;
+      document.getElementById('nmodal-nome').value='';
+      document.getElementById('nmodal-preco').value='';
+      document.getElementById('nmodal-forn-txt').textContent=FORN_ATIVO?'('+FORN_ATIVO.nome+')':'';
+      document.getElementById('nmodal-bg').classList.add('open');
     }
   }
 }
@@ -1579,7 +1609,7 @@ function mostrarProdModal(prod){
   }
 
   const semForn=!FORN_ATIVO?`<div class="pm-no-forn">⚠️ Nenhum fornecedor selecionado.<br>Selecione um em <b>Fornecedores</b>.</div>`:'';
-  const fornSection=false?`
+  const fornSection=FORN_ATIVO?`
     <div style="margin-bottom:12px">
       <div class="pm-inp-lbl">💰 Preço de <b>${FORN_ATIVO.nome}</b></div>
       <div class="pm-inp-row">
@@ -1590,7 +1620,9 @@ function mostrarProdModal(prod){
     </div>${diffHtml}`:semForn;
 
   const ce3=cod.replace(/'/g,"\\'");
-  const btnSave='';
+  const btnSave=FORN_ATIVO
+    ?`<button class="pm-btn pm-save" onclick="guardarPreco('${ce3}',${prod.id})">💾 Guardar Preço</button>`
+    :`<button class="pm-btn pm-save" onclick="nav('m4');fecharPmodal()">🏭 Selecionar Fornecedor</button>`;
 
   const imgSection=imgUrl
     ?`<img src="${imgUrl}" class="pm-img" onerror="this.outerHTML='<div class=pm-img-empty>📦</div>'">`
@@ -2049,8 +2081,8 @@ let encStreamAtual = null, encScanLoopId = null, encLastCode = null;
 let encZxingReader = null, encBarcodeDetector = null;
 let encCameraIndex = 0, encCamerasDisponiveis = [];
 
-function salvarEncomendas(){localStorage.setItem('PCV_ENC',JSON.stringify(ENCOMENDAS));}
-function carregarEncomendas(){try{const d=localStorage.getItem('PCV_ENC');if(d)ENCOMENDAS=JSON.parse(d);}catch(e){}}
+function salvarEncomendas(){localStorage.setItem('PC_ENC',JSON.stringify(ENCOMENDAS));}
+function carregarEncomendas(){try{const d=localStorage.getItem('PC_ENC');if(d)ENCOMENDAS=JSON.parse(d);}catch(e){}}
 
 function atualizarEncHeader(){
   encRenderCfgMelhor();
@@ -2279,7 +2311,7 @@ function imprimirEncomenda(){
 
 // ── SCANNER CONTÍNUO ENCOMENDAS ──
 async function abrirEncScanner(){
-  if(!encForn()){toast('Selecione primeiro um fornecedor','err');irParaFornecedores();return;}
+  if(!encForn()){toast('Selecione primeiro um fornecedor','err');nav('m4');return;}
   const modal=document.getElementById('enc-scan-modal');
   modal.style.display='flex';encScannerAberto=true;
   document.getElementById('enc-scan-input').value='';
@@ -2463,7 +2495,7 @@ function fatProg(txt,pct){
   if(pct!=null)document.getElementById('fat-prog-fill').style.width=Math.round(pct*100)+'%';
 }
 function abrirFatura(){
-  try{document.getElementById('fat-key').value=localStorage.getItem('PCV_AI_KEY')||'';}catch(e){}
+  try{document.getElementById('fat-key').value=localStorage.getItem('PC_AI_KEY')||'';}catch(e){}
   fatNova();
   document.getElementById('fat-modal-bg').classList.add('open');
 }
@@ -2732,7 +2764,7 @@ async function processarFatura(file,crop){
   document.getElementById('fat-pick').style.display='none';
   document.getElementById('fat-result').style.display='none';
   try{
-    const KEY=(localStorage.getItem('PCV_AI_KEY')||'').trim();
+    const KEY=(localStorage.getItem('PC_AI_KEY')||'').trim();
     const ePdf=/pdf/i.test(file.type)||/\.pdf$/i.test(file.name);
     if(KEY||ePdf){
       if(!KEY){await fatLerPdfLocal(file);FAT.busy=false;document.getElementById('fat-prog').style.display='none';return;}
@@ -3013,7 +3045,7 @@ function analisarFatura(data,W,extra,manter){
   // coluna de preço
   const fDet=manter?null:fatDetetarFornecedor(texto);
   const fIdAtual=manter?document.getElementById('fat-forn').value:((fDet||FORN_ATIVO||{}).id);
-  if(extra==null){try{extra=localStorage.getItem('PCV_FAT_COL_'+fIdAtual)||'';}catch(e){extra='';}}
+  if(extra==null){try{extra=localStorage.getItem('PC_FAT_COL_'+fIdAtual)||'';}catch(e){extra='';}}
   FAT.extra=extra;
   let col=null;
   if(achados.length&&L.some(l=>l.words.length)){
@@ -3136,7 +3168,7 @@ function fatTapPreco(li,wi){
       const dx=Math.abs((h.x0+h.x1)/2-FAT.teach.cx);
       if(dx<=FAT.teach.tol*2.5&&(!melhor||dx<melhor.dx))melhor={dx,t:h.t};
     }));
-    if(fid&&melhor)localStorage.setItem('PCV_FAT_COL_'+fid,melhor.t);
+    if(fid&&melhor)localStorage.setItem('PC_FAT_COL_'+fid,melhor.t);
   }catch(e){}
   fatFecharTap();
   analisarFatura(FAT.data,FAT.W,FAT.extra,true);
@@ -3146,7 +3178,7 @@ function fatTapPreco(li,wi){
 // ══ LEITURA POR IA (foto ou PDF) ══
 function fatGuardarKey(){
   const k=document.getElementById('fat-key').value.trim();
-  try{localStorage.setItem('PCV_AI_KEY',k);}catch(e){}
+  try{localStorage.setItem('PC_AI_KEY',k);}catch(e){}
   toast(k?'✓ Chave guardada — a leitura passa a ser por IA':'Chave removida (volta ao OCR local)','ok');
 }
 function fatParaB64(file,max){
@@ -3169,7 +3201,7 @@ REGRAS: "codigos" = todos os códigos que aparecem nessa linha (referência e ba
   fatProg('A IA está a ler a fatura…',0.5);
   const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
     headers:{'content-type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-    body:JSON.stringify({model:localStorage.getItem('PCV_AI_MODEL')||'claude-sonnet-5-5',max_tokens:8000,messages:[{role:'user',content:[bloco,{type:'text',text:prompt}]}]})});
+    body:JSON.stringify({model:localStorage.getItem('PC_AI_MODEL')||'claude-sonnet-5-5',max_tokens:8000,messages:[{role:'user',content:[bloco,{type:'text',text:prompt}]}]})});
   const j=await r.json();
   if(!r.ok)throw new Error((j.error&&j.error.message)||('Erro '+r.status));
   const txt=(j.content||[]).filter(x=>x.type==='text').map(x=>x.text).join('');
@@ -3284,7 +3316,7 @@ function fatReanalisar(){
   if(!FAT.data){toast('Tire primeiro a foto da fatura','err');return;}
   const nome='';
   const fid=document.getElementById('fat-forn').value;
-  try{if(fid)localStorage.setItem('PCV_FAT_COL_'+fid,nome);}catch(e){}   // lembra para este fornecedor
+  try{if(fid)localStorage.setItem('PC_FAT_COL_'+fid,nome);}catch(e){}   // lembra para este fornecedor
   try{
     analisarFatura(FAT.data,FAT.W,nome,true);
     const n=FAT.linhas.length;
@@ -3675,7 +3707,7 @@ function encProdItem(p){
   })||null;
 }
 function encProdAbrir(){
-  if(!encForn()){toast('Selecione primeiro um fornecedor','err');irParaFornecedores();return;}
+  if(!encForn()){toast('Selecione primeiro um fornecedor','err');nav('m4');return;}
   if(!DADOS.length){toast('Carregue primeiro o Excel de produtos','err');return;}
   document.getElementById('encp-forn').textContent='Fornecedor: '+encForn().nome;
   document.getElementById('encp-busca').value='';ENCP.lim=100;ENCP.pid=new Map();
@@ -3742,6 +3774,7 @@ function encProdAlt(i,d){
   encProdTotais();
 }
 
+if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(e=>console.warn('SW',e));});}
 
 
 // ══ ✕ para limpar o texto nas caixas de pesquisa ══
@@ -3775,11 +3808,11 @@ try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();
 
 
 // ══ ENCOMENDAS: MELHOR FORNECEDOR (preço mais baixo registado, agrupado por fornecedor → família) ══
-var ENC_MODO='forn';try{ENC_MODO=localStorage.getItem('PCV_ENC_MODO')||'forn';}catch(e){}
+var ENC_MODO='forn';try{ENC_MODO=localStorage.getItem('PC_ENC_MODO')||'forn';}catch(e){}
 var MELHOR={id:'melhor',nome:'⭐ Melhor Fornecedor'};
 function encForn(){return ENC_MODO==='melhor'?MELHOR:FORN_ATIVO;}
 function encSetModo(m){
-  ENC_MODO=m;try{localStorage.setItem('PCV_ENC_MODO',m);}catch(e){}
+  ENC_MODO=m;try{localStorage.setItem('PC_ENC_MODO',m);}catch(e){}
   renderEncomenda();atualizarEncBadge();atualizarEncHeader();
 }
 const escH=t=>String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;');
@@ -4005,73 +4038,14 @@ function encMelhorTick(id,v){
   f.melhor=!!v;salvarForn();encRenderCfgMelhor();renderEncomenda();
 }
 
-// ══ MODO CONSULTA: preços vêm do GitHub; só os fornecedores «incluídos» mostram o nome, os restantes viram «Outros» ══
-const OUTROS_ID='outros';
-function sanitizarPayload(data){
-  const lista=data.fornecedores||[],sem=lista.length&&lista.every(f=>f.melhor===undefined),incl={};
-  lista.forEach(f=>{if(sem?fornPreferido(f):f.melhor===true)incl[String(f.id)]={id:f.id,nome:f.nome,melhor:true};});
-  const agora=Date.now(),precos={};let haOutros=false;
-  Object.keys(data.precos||{}).forEach(cod=>{
-    const out={};let outros=null;
-    Object.keys(data.precos[cod]||{}).forEach(fid=>{
-      const h=data.precos[cod][fid]||[];
-      if(incl[fid]){out[fid]=h.slice();return;}
-      for(let i=h.length-1;i>=0;i--){   // fornecedor oculto: só conta o último preço válido
-        const e=h[i],p=parseFloat(e.preco);if(isNaN(p)||p<0)continue;
-        if(e.promo){const t=dataHora(e.data);if(!t||(agora-t)/864e5>15)continue;}
-        if(!outros||p<parseFloat(outros.preco))outros=Object.assign({},e);
-        break;
-      }
-    });
-    if(outros){out[OUTROS_ID]=[outros];haOutros=true;}
-    if(Object.keys(out).length)precos[cod]=out;
-  });
-  const forn=Object.values(incl);
-  if(haOutros)forn.push({id:OUTROS_ID,nome:'Outros',melhor:false});
-  return {fornecedores:forn,precos};
-}
-function marcarSyncPendente(){}
-async function enviarParaGitHub(){return false;}
-function atualizarGitStatus(){}
-function atualizarHeaderForn(){}
-function apagarHist(){toast('Modo consulta','err');}
-function encRenderCfgMelhor(){const el=document.getElementById('enc-melhor-cfg');if(el)el.style.display='none';}
-function statusHeader(txt){const e=document.getElementById('hforn-nome');if(!e)return;e.textContent=txt||('Preços de '+(localStorage.getItem('PCV_TS')||'—'));}
-function renderFornecedores(){
-  const c=document.getElementById('forn-list');
-  if(!FORNECEDORES.length){c.innerHTML='<div class="empty"><div class="empty-ico">🏭</div><div class="empty-title">Sem fornecedores</div><div class="empty-sub">Atualize os preços (menu ☰)</div></div>';return;}
-  c.innerHTML=FORNECEDORES.map(f=>{const at=FORN_ATIVO&&String(FORN_ATIVO.id)===String(f.id);
-    return `<div class="fitem${at?' ativo':''}" onclick="selecionarFornecedor('${f.id}')"><div class="fava">🏭</div><div class="ficol"><div class="finome">${escH(f.nome)}</div></div><div class="fiacts">${at?'<span class="fi-ativo-b">ATIVO</span>':''}</div></div>`;}).join('');
-}
-async function atualizarDoGitHub(silencioso){
-  if(!GIT_CFG.rawUrl)return false;
-  if(!navigator.onLine){statusHeader('Offline · preços de '+(localStorage.getItem('PCV_TS')||'—'));if(!silencioso)toast('Sem ligação à internet','err');return false;}
-  try{
-    const resp=await fetch(GIT_CFG.rawUrl+'?t='+Date.now(),{cache:'no-store'});
-    if(!resp.ok)throw new Error('ficheiro de preços não encontrado ('+resp.status+')');
-    const d=sanitizarPayload(await resp.json());   // nomes reais nunca chegam a ser guardados
-    FORNECEDORES=d.fornecedores;PRECOS_DB=d.precos;
-    if(FORN_ATIVO&&!FORNECEDORES.some(f=>String(f.id)===String(FORN_ATIVO.id))){FORN_ATIVO=null;salvarFornAtivo();}
-    try{unificarChavesPrecos();}catch(e){}
-    salvarForn();salvarPrecos();
-    localStorage.setItem('PCV_TS',new Date().toLocaleString('pt-PT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}));
-    statusHeader();atualizarStats();
-    const a=(document.querySelector('.screen.active')||{}).id;
-    if(a==='m2')renderProdutos();else if(a==='m3')renderComparativo();else if(a==='m4')renderFornecedores();else if(a==='m5')renderEncomenda();
-    if(!silencioso)toast('✓ Preços atualizados','ok');
-    return true;
-  }catch(err){statusHeader('Sem atualização · '+(localStorage.getItem('PCV_TS')||'—'));if(!silencioso)toast('Erro ao atualizar: '+err.message,'err');return false;}
-}
-statusHeader();
-if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(e=>console.warn('SW',e));});}
-
 // ══ INIT ══
-
 (async()=>{
   await abrirImgDB();
   setTimeout(carregarImgsBackground,300);
   carregar();limparPrecosInvalidos();try{unificarChavesPrecos();}catch(e){console.error(e);}carregarEncomendas();atualizarHeaderForn();atualizarStats();
   carregarConfigGit();atualizarGitStatus();
+  try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();}catch(e){}
+  if(!GIT_CFG.token&&!GIT_CFG.proxy)setTimeout(()=>toast('⚠️ Sem token GitHub (dados do Chrome limpos?). Abra o ⚙️ e volte a colocá-lo para enviar alterações.','err'),2500);
   if(GIT_CFG.rawUrl)atualizarDoGitHub(true);
   if(GIT_CFG.produtosRawUrl)atualizarProdutosDoGitHub(true);
   setTimeout(abrirScanner,400);

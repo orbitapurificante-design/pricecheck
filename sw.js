@@ -1,8 +1,15 @@
-// PriceCheck Pro — service worker (v3)
-const CACHE = 'pricecheck-v4';
+// PriceCheck — service worker (v5) · serve index.html (consulta) e admin.html (admin) sem se misturarem
+const CACHE = 'pricecheck-v5';
 const SCOPE = self.registration.scope;
-const PRE = ['index.html', 'manifest.json', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png'].map(f => new URL(f, SCOPE).href);
+const PRE = ['index.html', 'admin.html', 'manifest.json', 'manifest-admin.json', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png'].map(f => new URL(f, SCOPE).href);
 const CDN = ['https://cdnjs.cloudflare.com/', 'https://cdn.jsdelivr.net/', 'https://fonts.googleapis.com/', 'https://fonts.gstatic.com/'];
+
+// cada página tem a sua própria entrada na cache (nunca troca uma pela outra)
+const chavePagina = url => {
+  const u = new URL(url); u.search = ''; u.hash = '';
+  if (u.pathname.endsWith('/')) u.pathname += 'index.html';
+  return u.href;
+};
 
 self.addEventListener('install', e => {
   e.waitUntil(
@@ -22,18 +29,18 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   const req = e.request;
-  if (req.method !== 'GET') return;                       // POST/sync nunca passam pela cache
+  if (req.method !== 'GET') return;
   const url = new URL(req.url);
   const mesma = url.origin === self.location.origin;
   const cdn = CDN.some(p => req.url.startsWith(p));
   if (!mesma && !cdn) return;                             // GitHub/proxy: direto à rede
 
-  // página: rede primeiro (apanha versões novas), cache se estiver offline
+  // páginas: rede primeiro (apanha versões novas); se for lenta (3,5 s) ou offline abre a guardada DESSA página
   if (req.mode === 'navigate' || (mesma && (url.pathname.endsWith('.html') || url.pathname.endsWith('/')))) {
-    // rede primeiro, mas se a ligação for má/lenta (3,5 s) abre logo a versão guardada → funciona offline
-    const guardada = () => caches.match(new URL('index.html', SCOPE).href);
+    const chave = chavePagina(req.url);
+    const guardada = () => caches.match(chave);
     const rede = fetch(req).then(res => {
-      if (res && res.status === 200) { const cl = res.clone(); caches.open(CACHE).then(c => c.put(new URL('index.html', SCOPE).href, cl)); }
+      if (res && res.status === 200) { const cl = res.clone(); caches.open(CACHE).then(c => c.put(chave, cl)); }
       return res;
     });
     e.respondWith(
