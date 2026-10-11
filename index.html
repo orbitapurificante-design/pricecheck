@@ -550,6 +550,10 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
     <button class="dbtn dbtn-s" onclick="document.getElementById('f-excel').click();fecharTudo()">📊 Carregar Excel de Produtos</button>
     <button class="dbtn dbtn-s" onclick="document.getElementById('f-fotos').click();fecharTudo()">🖼️ Carregar Fotos dos Produtos</button>
     <button class="dbtn dbtn-s" onclick="document.getElementById('f-fotos-json').click();fecharTudo()">📥 Importar cópia das fotos (JSON)</button>
+    <div class="dsep">PC (Sage)</div>
+    <button class="dbtn dbtn-s" id="btn-pc" onclick="alternarPC();fecharTudo()">💻 Enviar leitura para o PC</button>
+    <button class="dbtn dbtn-s" id="btn-pcseq" onclick="configSequencia();fecharTudo()">⌨️ Teclas por artigo (encomenda)</button>
+    <button class="dbtn dbtn-s" id="btn-pccod" onclick="alternarCodSage();fecharTudo()">🔢 Código enviado: Referência</button>
     <div class="dsep">Exportar</div>
     <button class="dbtn dbtn-s" onclick="exportarComparativo();fecharTudo()">📊 Exportar Comparativo Excel</button>
     <button class="dbtn dbtn-s" onclick="exportarHistorico();fecharTudo()">📋 Exportar Histórico Excel</button>
@@ -632,6 +636,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
     <div style="position:absolute;bottom:10px;left:0;right:0;text-align:center;font-size:11px;color:rgba(255,255,255,0.5);letter-spacing:1px;">APONTE PARA O CÓDIGO DE BARRAS</div>
   </div>
   <div style="padding:14px 16px 20px;background:#1a2340;border-top:1px solid rgba(201,168,76,0.2);">
+    <button id="scan-rapido-btn" onclick="alternarRapido()" style="width:100%;margin-bottom:10px;padding:10px;border-radius:8px;border:1px solid rgba(201,168,76,.5);background:#1e2a4a;color:#c9a84c;font-size:13px;font-weight:700;cursor:pointer">⚡ Leitura rápida: desligada</button>
     <div id="scan-status" style="text-align:center;font-size:12px;min-height:18px;margin-bottom:10px;font-weight:500;"></div>
     <div style="display:flex;gap:8px;margin-bottom:10px;">
       <select id="scan-sel" style="flex:1;background:#1e2a4a;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:9px 12px;color:#f1f5f9;font-size:12px;font-family:Inter,sans-serif;outline:none;" onchange="trocarCamera()"><option>A iniciar...</option></select>
@@ -766,6 +771,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
     <div style="display:flex;justify-content:space-between;gap:10px;margin-top:12px"><button class="enc-scan-btn" style="flex:1;justify-content:center;background:#fff;color:#1a2340;border:1.5px solid var(--a);padding:12px 12px" onclick="encProdAbrir()">📦 PRODUTOS</button><button class="enc-scan-btn" style="flex:1;justify-content:center" onclick="abrirEncScanner()">
       <span style="font-size:17px">📷</span> SCAN
     </button></div>
+    <button onclick="enviarEncomendaSage()" style="width:100%;margin-top:10px;padding:11px;border-radius:10px;border:1.5px solid var(--a);background:transparent;color:var(--a);font-weight:700;font-size:13px;cursor:pointer">💻 Enviar encomenda para o Sage</button>
   </div>
   <div class="enc-forn-sel sem" id="enc-forn-sel">
     <div class="enc-forn-dot"></div>
@@ -1370,7 +1376,7 @@ async function abrirScanner(){
   document.getElementById('scan-input').value='';
   setScanStatus('A iniciar câmera...','');
   if(temBarcodeDetector()){
-    try{barcodeDetector=new BarcodeDetector({formats:['ean_13','ean_8','code_128','code_39','qr_code','upc_a','upc_e','itf','codabar','code_93']});}
+    try{barcodeDetector=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','itf']});}
     catch(e){barcodeDetector=null;}
   }
   await iniciarCamera();
@@ -1446,7 +1452,7 @@ function iniciarLoopNativo(video){
         const barcodes=await barcodeDetector.detect(video);
         if(barcodes.length>0&&scannerAberto){
           const cod=barcodes[0].rawValue;
-          if(cod!==lastScanCode){lastScanCode=cod;setScanStatus('✓ Lido: '+cod,'ok');bipe();setTimeout(()=>{fecharScanner();processarCodigo(cod);},350);return;}
+          if(cod!==lastScanCode&&leituraAceite(cod)){lastScanCode=cod;setScanStatus('✓ Lido: '+cod,'ok');bipe();if(RAPIDO){leituraRapida(cod);}else{setTimeout(()=>{fecharScanner();processarCodigo(cod);},120);return;}}
         }
       }catch(e){}
       processing=false;
@@ -1460,7 +1466,7 @@ function iniciarZXing(video){
   try{
     zxingReader=new ZXing.BrowserMultiFormatReader();lastScanCode=null;
     zxingReader.decodeFromStream(streamAtual,video,(result,err)=>{
-      if(result&&scannerAberto){const cod=result.getText();if(cod===lastScanCode)return;lastScanCode=cod;setScanStatus('✓ Lido: '+cod,'ok');bipe();setTimeout(()=>{fecharScanner();processarCodigo(cod);},350);}
+      if(result&&scannerAberto){const cod=result.getText();if(cod===lastScanCode||!leituraAceite(cod))return;lastScanCode=cod;setScanStatus('✓ Lido: '+cod,'ok');bipe();if(RAPIDO){leituraRapida(cod);}else{setTimeout(()=>{fecharScanner();processarCodigo(cod);},120);}}
     });
   }catch(e){setScanStatus('Use entrada manual','err');}
 }
@@ -2287,7 +2293,7 @@ async function abrirEncScanner(){
   atualizarEncBadge();
   setEncStatus('A iniciar câmera...','');
   if(temBarcodeDetector()){
-    try{encBarcodeDetector=new BarcodeDetector({formats:['ean_13','ean_8','code_128','code_39','qr_code','upc_a','upc_e','itf','codabar','code_93']});}
+    try{encBarcodeDetector=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','itf']});}
     catch(e){encBarcodeDetector=null;}
   }
   await encIniciarCamera();
@@ -2349,7 +2355,7 @@ function encIniciarLoopNativo(video){
           const cod=barcodes[0].rawValue;
           const now=Date.now();
           // Evitar re-leitura do mesmo código em menos de 1.5s
-          if(cod!==lastAddedCode||(now-lastAddedTime)>1500){
+          if((cod!==lastAddedCode||(now-lastAddedTime)>1000)&&leituraAceite(cod)){
             lastAddedCode=cod;lastAddedTime=now;
             encLastCode=cod;
             setEncStatus('✓ '+cod,'ok');
@@ -2376,7 +2382,7 @@ function encIniciarZXing(video){
       if(result&&encScannerAberto){
         const cod=result.getText();
         const now=Date.now();
-        if(cod!==lastAddedCode||(now-lastAddedTime)>1500){
+        if((cod!==lastAddedCode||(now-lastAddedTime)>1000)&&leituraAceite(cod)){
           lastAddedCode=cod;lastAddedTime=now;
           setEncStatus('✓ '+cod,'ok');
           document.getElementById('enc-scan-last').textContent='Último: '+cod;
@@ -4063,6 +4069,119 @@ async function atualizarDoGitHub(silencioso){
   }catch(err){statusHeader('Sem atualização · '+(localStorage.getItem('PCV_TS')||'—'));if(!silencioso)toast('Erro ao atualizar: '+err.message,'err');return false;}
 }
 statusHeader();
+// ══ ENVIAR LEITURA PARA O PC (Sage): só quando o index é aberto a partir do PC (http://IP:8765) ══
+function pcAtivo(){return location.protocol==='http:'&&localStorage.getItem('PCV_PCON')==='1'&&!!localStorage.getItem('PCV_PCKEY');}
+function pcBtnTxt(){const b=document.getElementById('btn-pc');if(b)b.textContent='💻 Enviar leitura para o PC: '+(pcAtivo()?'LIGADO':'desligado');}
+function alternarPC(){
+  if(location.protocol!=='http:'){toast('Abra o index a partir do PC: http://IP-do-PC:8765','err');return;}
+  if(localStorage.getItem('PCV_PCON')==='1'){localStorage.setItem('PCV_PCON','0');toast('Envio para o PC desligado','ok');}
+  else{const k=prompt('Senha mostrada no PC:',localStorage.getItem('PCV_PCKEY')||'');if(!k)return;
+    localStorage.setItem('PCV_PCKEY',k.trim());localStorage.setItem('PCV_PCON','1');toast('Envio para o PC ligado','ok');}
+  pcBtnTxt();
+}
+// ══ LEITURA SÓ DE CÓDIGOS COMPLETOS E CONHECIDOS ══
+function gtinOk(c){
+  if(!/^\d+$/.test(c)||![8,12,13,14].includes(c.length))return false;
+  const d=c.split('').map(Number),chk=d.pop();
+  const s=d.reverse().reduce((a,n,i)=>a+n*(i%2===0?3:1),0);
+  return (10-s%10)%10===chk;
+}
+let _erroT=0,_erroCod='';
+function bipeErro(){
+  try{if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+    [0,0.16].forEach(t=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='square';o.frequency.value=180;
+      o.connect(g);g.connect(audioCtx.destination);g.gain.setValueAtTime(0.12,audioCtx.currentTime+t);g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+t+0.13);
+      o.start(audioCtx.currentTime+t);o.stop(audioCtx.currentTime+t+0.14);});}catch(e){}
+  if(navigator.vibrate)navigator.vibrate([40,60,40]);
+}
+// aceita só se o código está completo (dígito de controlo certo) E existe no ficheiro de produtos
+function leituraAceite(cod){
+  cod=String(cod||'').trim();
+  let motivo=null;
+  if(!/^\d{8,14}$/.test(cod)||!gtinOk(cod))motivo='Leitura incompleta';
+  else if(DADOS.length&&!findProd(cod))motivo='Não está no ficheiro: '+cod;
+  if(!motivo)return true;
+  const agora=Date.now();
+  if(agora-_erroT>900||cod!==_erroCod){_erroT=agora;_erroCod=cod;bipeErro();
+    const st=document.getElementById('scan-status');if(st&&scannerAberto)setScanStatus('✗ '+motivo,'err');
+    if(encScannerAberto)setEncStatus('✗ '+motivo,'err');}
+  return false;
+}
+async function pcEnviar(cod,qtd,seq){
+  if(!/^\d{4,14}$/.test(String(cod)))return {ok:false,status:'código inválido'};
+  let u='/enviar?k='+encodeURIComponent(localStorage.getItem('PCV_PCKEY'))+'&cod='+encodeURIComponent(cod);
+  if(qtd!=null)u+='&qtd='+encodeURIComponent(qtd);
+  if(seq)u+='&seq='+encodeURIComponent(seq);
+  return fetch(u,{cache:'no-store'});
+}
+const _processarCodigoOrig=processarCodigo;
+processarCodigo=function(c){
+  if(pcAtivo()&&/^\d{4,14}$/.test(String(c)))pcEnviar(c).then(r=>toast(r.ok?'↗ Enviado para o PC: '+c:(r.status===403?'Senha do PC errada':'PC recusou ('+r.status+')'),r.ok?'ok':'err'))
+    .catch(()=>toast('PC não responde','err'));
+  return _processarCodigoOrig.apply(this,arguments);
+};
+// ⚡ leitura rápida: câmara sempre ativa, só envia o código ao PC (não abre a ficha)
+let RAPIDO=localStorage.getItem('PCV_RAPIDO')==='1',rapidoN=0;
+function rapidoTxt(){const b=document.getElementById('scan-rapido-btn');if(b){b.textContent='⚡ Leitura rápida: '+(RAPIDO?'LIGADA':'desligada');b.style.background=RAPIDO?'#c9a84c':'#1e2a4a';b.style.color=RAPIDO?'#1a2340':'#c9a84c';}}
+function alternarRapido(){
+  if(!RAPIDO&&!pcAtivo()){toast('Ligue primeiro o envio para o PC (menu ☰)','err');return;}
+  RAPIDO=!RAPIDO;rapidoN=0;localStorage.setItem('PCV_RAPIDO',RAPIDO?'1':'0');rapidoTxt();
+  setScanStatus(RAPIDO?'⚡ Aponte aos códigos, um a seguir ao outro':'Aponte para o código','ok');
+}
+function leituraRapida(cod){
+  setTimeout(()=>{if(lastScanCode===cod)lastScanCode=null;},1000);   // mesmo código só volta a ler após 2 s
+  if(!pcAtivo()){setScanStatus('❌ Envio para o PC desligado','err');return;}
+  pcEnviar(cod).then(r=>{if(r.ok){rapidoN++;setScanStatus('⚡ '+cod+' → PC  ·  '+rapidoN+' lido(s)','ok');}else setScanStatus(r.status===403?'❌ Senha do PC errada':'❌ PC recusou ('+r.status+')','err');})
+    .catch(()=>setScanStatus('❌ PC não responde','err'));
+}
+// ══ ENCOMENDA → SAGE: preenche código e quantidade de cada linha ══
+function configSequencia(){
+  const a=prompt('Teclas por artigo, separadas por vírgula.\nPalavras: COD, QTD, TAB, ENTER, DOWN, UP, LEFT, RIGHT, ESPERA\nExemplo: COD,ENTER,ESPERA,QTD,ENTER',localStorage.getItem('PCV_PCSEQ')||'COD,ENTER,ESPERA,QTD,ENTER');
+  if(a==null)return;const s=a.toUpperCase().replace(/\s/g,'');
+  if(!/^(COD|QTD|TAB|ENTER|DOWN|UP|LEFT|RIGHT|ESC|ESPERA)(,(COD|QTD|TAB|ENTER|DOWN|UP|LEFT|RIGHT|ESC|ESPERA))*$/.test(s)){toast('Sequência inválida','err');return;}
+  localStorage.setItem('PCV_PCSEQ',s);toast('Guardado: '+s,'ok');
+}
+const sageEAN=()=>localStorage.getItem('PCV_PCCOD')!=='cod';
+function codSageTxt(){const b=document.getElementById('btn-pccod');if(b)b.textContent='🔢 Código enviado: '+(sageEAN()?'EAN (código de barras)':'Referência');}
+function alternarCodSage(){localStorage.setItem('PCV_PCCOD',sageEAN()?'cod':'ean');codSageTxt();toast('Código enviado: '+(sageEAN()?'EAN':'Referência'),'ok');}
+function codParaSage(it){
+  const p=findProd(it.cod),L=a=>a.map(x=>String(x==null?'':x).trim());
+  if(sageEAN())return L([p&&p.ean,it.cod,p&&p.f]).find(x=>gtinOk(x))||null;      // EAN completo e com dígito de controlo certo
+  return L([it.cod,p&&p.cod]).find(x=>/^\d{4,14}$/.test(x))||null;
+}
+const esperar=ms=>new Promise(r=>setTimeout(r,ms));
+let sageParar=false;
+async function enviarEncomendaSage(){
+  if(!pcAtivo()){toast('Abra o index a partir do PC e ligue o envio (menu ☰)','err');return;}
+  const f=encForn(),items=f?(ENCOMENDAS[f.id]||[]):[];
+  if(!items.length){toast('Encomenda vazia','err');return;}
+  const seq=localStorage.getItem('PCV_PCSEQ')||'COD,ENTER,ESPERA,QTD,ENTER';
+  sageParar=false;
+  const ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(10,15,35,.96);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center;font-family:Inter,system-ui,sans-serif';
+  ov.innerHTML='<div id="sg-t" style="font-size:18px;font-weight:700"></div><div id="sg-s" style="font-size:13px;opacity:.7"></div><div id="sg-l" style="font-size:12px;opacity:.85;max-height:30vh;overflow:auto;text-align:left;max-width:90vw"></div><button id="sg-b" style="padding:13px 30px;border:0;border-radius:12px;background:#ef4444;color:#fff;font-weight:700;font-size:15px">Parar</button>';
+  document.body.appendChild(ov);
+  ov.querySelector('#sg-b').onclick=()=>{sageParar=true;};
+  const T=t=>ov.querySelector('#sg-t').textContent=t,S=t=>ov.querySelector('#sg-s').textContent=t;
+  let feitos=0;const saltados=[];
+  try{
+    S(items.length+' artigo(s) · teclas: '+seq);
+    for(let s=8;s>0&&!sageParar;s--){T('Clique no campo do Sage, no PC… '+s);await esperar(1000);}
+    for(let i=0;i<items.length&&!sageParar;i++){
+      const it=items[i],cod=codParaSage(it);
+      if(!cod){saltados.push((it.nome||it.cod)+' ('+it.cod+')');continue;}   // sem código de barras válido: não envia nada
+      T('A enviar '+(i+1)+' / '+items.length);S(cod+' × '+it.qtd);
+      const r=await pcEnviar(cod,it.qtd,seq);
+      if(!r.ok)throw new Error(r.status===403?'senha do PC errada':'PC recusou ('+r.status+')');
+      feitos++;await esperar(900);
+    }
+    T(sageParar?'Parado':'✓ Concluído');S(feitos+' de '+items.length+' artigo(s) enviados'+(saltados.length?' · '+saltados.length+' NÃO enviado(s):':''));
+    ov.querySelector('#sg-l').innerHTML=saltados.map(x=>'• '+String(x).replace(/[<>&]/g,'')).join('<br>');
+  }catch(e){T('Erro: '+e.message);S(feitos+' de '+items.length+' enviados');}
+  ov.querySelector('#sg-b').textContent='Fechar';ov.querySelector('#sg-b').style.background='#c9a84c';ov.querySelector('#sg-b').onclick=()=>ov.remove();
+}
+rapidoTxt();codSageTxt();
+pcBtnTxt();
 if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(e=>console.warn('SW',e));});}
 
 // ══ INIT ══
