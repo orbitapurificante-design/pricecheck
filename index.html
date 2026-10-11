@@ -626,7 +626,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
 <!-- SCANNER MODAL (câmara + manual) -->
 <div id="sage-modal" style="display:none;position:fixed;inset:0;z-index:9500;background:#000;flex-direction:column;">
   <div style="flex:1;position:relative;overflow:hidden;min-height:0;"><video id="lsg-video" playsinline autoplay muted style="width:100%;height:100%;object-fit:cover;display:block;"></video>
-    <div style="position:absolute;top:38%;left:50%;transform:translate(-50%,-50%);width:74vw;max-width:310px;height:150px;border:2.5px solid #c9a84c;border-radius:16px;box-shadow:0 0 0 4000px rgba(0,0,0,.5);"></div></div>
+    <div id="lsg-guia" style="position:absolute;top:38%;left:50%;transform:translate(-50%,-50%);width:74vw;max-width:310px;height:150px;border:2.5px solid #c9a84c;border-radius:16px;box-shadow:0 0 0 4000px rgba(0,0,0,.6);"><div style="position:absolute;left:5%;right:5%;height:2px;background:linear-gradient(90deg,transparent,#c9a84c,transparent);box-shadow:0 0 8px #c9a84c;animation:sl 2s ease-in-out infinite;"></div></div></div>
   <div style="background:#1a2340;padding:14px 16px calc(14px + env(safe-area-inset-bottom));border-top:1px solid rgba(201,168,76,.3);color:#fff;text-align:center;">
     <div style="font-size:10px;letter-spacing:1.5px;color:#7a8fba;font-weight:700;">💻 LEITOR SAGE</div>
     <div style="display:flex;justify-content:center;align-items:baseline;gap:10px;"><span id="lsg-n" style="font:800 36px 'JetBrains Mono',monospace;color:#c9a84c;">0</span><span style="font-size:12px;color:#7a8fba;">enviados</span><span id="lsg-e" style="font-size:12px;color:#ef4444;"></span></div>
@@ -638,7 +638,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
 <div id="scan-modal" style="display:none;position:fixed;inset:0;z-index:9000;background:#000;flex-direction:column;">
   <div id="scan-vwrap" style="flex:1;position:relative;overflow:hidden;background:#000;">
     <video id="scan-video" playsinline autoplay muted style="width:100%;height:100%;object-fit:cover;display:block;"></video>
-    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-55%);width:70vw;max-width:280px;height:160px;border-radius:16px;box-shadow:0 0 0 4000px rgba(0,0,0,0.6);">
+    <div id="scan-guia" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-55%);width:70vw;max-width:280px;height:160px;border-radius:16px;box-shadow:0 0 0 4000px rgba(0,0,0,0.6);">
       <div style="position:absolute;inset:-2px;border-radius:18px;border:2.5px solid #c9a84c;"></div>
       <div style="position:absolute;width:22px;height:22px;top:-2px;left:-2px;border-top:3px solid #c9a84c;border-left:3px solid #c9a84c;border-radius:4px 0 0 0;"></div>
       <div style="position:absolute;width:22px;height:22px;top:-2px;right:-2px;border-top:3px solid #c9a84c;border-right:3px solid #c9a84c;border-radius:0 4px 0 0;"></div>
@@ -823,7 +823,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
     <video id="enc-scan-video" playsinline autoplay muted style="width:100%;height:100%;object-fit:cover;display:block;"></video>
     <div class="enc-scan-badge" id="enc-scan-badge">📦 ENCOMENDA</div>
     <div class="enc-scan-count" id="enc-scan-count">0 artigos</div>
-    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-55%);width:70vw;max-width:280px;height:160px;border-radius:16px;box-shadow:0 0 0 4000px rgba(0,0,0,0.6);">
+    <div id="enc-guia" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-55%);width:70vw;max-width:280px;height:160px;border-radius:16px;box-shadow:0 0 0 4000px rgba(0,0,0,0.6);">
       <div style="position:absolute;inset:-2px;border-radius:18px;border:2.5px solid #c9a84c;"></div>
       <div style="position:absolute;width:22px;height:22px;top:-2px;left:-2px;border-top:3px solid #c9a84c;border-left:3px solid #c9a84c;border-radius:4px 0 0 0;"></div>
       <div style="position:absolute;width:22px;height:22px;top:-2px;right:-2px;border-top:3px solid #c9a84c;border-right:3px solid #c9a84c;border-radius:0 4px 0 0;"></div>
@@ -1470,11 +1470,12 @@ function iniciarLoopNativo(video){
     if(!processing&&video.readyState>=2){
       processing=true;
       try{
-        const barcodes=await barcodeDetector.detect(video);
+        const barcodes=await detectarNoQuadro(barcodeDetector,video,'scan-guia');
         if(barcodes.length>0&&scannerAberto){
           const cod=barcodes[0].rawValue;
-          const _t=Date.now(),_livre=RAPIDO?eNova(estR,cod,barcodes[0].boundingBox,_t,video):(cod!==lastScanCode);
-          if(_livre&&leituraAceite(cod)){lastScanCode=cod;setScanStatus('✓ Lido: '+cod,'ok');bipe();if(RAPIDO){leituraRapida(cod);}else{setTimeout(()=>{fecharScanner();processarCodigo(cod);},120);return;}}
+          const _t=Date.now(),_r=RAPIDO?aceitarSolta(cod,estR,barcodes[0].boundingBox,_t,video):{ok:cod!==lastScanCode&&leituraAceite(cod)};
+          if(_r.ok){lastScanCode=cod;setScanStatus('✓ Lido: '+cod,'ok');bipe();if(RAPIDO){leituraRapida(cod);}else{setTimeout(()=>{fecharScanner();processarCodigo(cod);},120);return;}}
+          else if(_r.motivo)erroLeitura(_r.motivo,cod);
         }
       }catch(e){}
       processing=false;
@@ -2372,7 +2373,7 @@ function encIniciarLoopNativo(video){
     if(!processing&&video.readyState>=2){
       processing=true;
       try{
-        const barcodes=await encBarcodeDetector.detect(video);
+        const barcodes=await detectarNoQuadro(encBarcodeDetector,video,'enc-guia');
         if(barcodes.length>0&&encScannerAberto){
           const cod=barcodes[0].rawValue;
           const now=Date.now();
@@ -4122,12 +4123,51 @@ function leituraAceite(cod){
   let motivo=null;
   if(!/^\d{8,14}$/.test(cod)||!gtinOk(cod))motivo='Leitura incompleta';
   else if(DADOS.length&&!RAPIDO&&!findProd(cod))motivo='Não está no ficheiro: '+cod;
+  else if(RAPIDO&&!findProd(cod)&&![12,13,14].includes(cod.length))motivo='Código curto ignorado';
   if(!motivo)return true;
+  erroLeitura(motivo,cod);
+  return false;
+}
+function erroLeitura(motivo,cod){
   const agora=Date.now();
   if(agora-_erroT>900||cod!==_erroCod){_erroT=agora;_erroCod=cod;bipeErro();
     const st=document.getElementById('scan-status');if(st&&scannerAberto)setScanStatus('✗ '+motivo,'err');
     if(encScannerAberto)setEncStatus('✗ '+motivo,'err');}
-  return false;
+}
+// leitura rápida / Leitor Sage (aceita códigos fora do Excel): completo + comprimento de produto + confirmado em 2 imagens seguidas
+function solido(c,est,t){if(DADOS.length&&findProd(c))return true;const ok=(est.pc===c&&t-est.pt<500);est.pc=c;est.pt=t;return ok;}
+function aceitarSolta(c,est,bb,t,v){
+  c=String(c||'').trim();
+  if(!/^\d{8,14}$/.test(c)||!gtinOk(c))return{ok:false,motivo:'Leitura incompleta'};
+  if(!(DADOS.length&&findProd(c))&&![12,13,14].includes(c.length))return{ok:false,motivo:'Código curto ignorado'};   // 8 dígitos só se estiver no ficheiro
+  if(!solido(c,est,t))return{ok:false};
+  return{ok:eNova(est,c,bb,t,v)};
+}
+// zona de leitura: só o que está DENTRO do quadrado (recorta a imagem do vídeo)
+function roiQuadro(vr,gr,vw,vh,pad){
+  const sc=Math.max(vr.width/vw,vr.height/vh),ox=(vr.width-vw*sc)/2,oy=(vr.height-vh*sc)/2;
+  let sw=gr.width/sc,sh=gr.height/sc,sx=(gr.left-vr.left-ox)/sc,sy=(gr.top-vr.top-oy)/sc;
+  sx-=sw*pad;sy-=sh*pad;sw*=1+2*pad;sh*=1+2*pad;
+  sx=Math.max(0,sx);sy=Math.max(0,sy);sw=Math.min(vw-sx,sw);sh=Math.min(vh-sy,sh);
+  return{sx,sy,sw,sh};
+}
+let _cvQ=null,_cxQ=null;
+async function detectarNoQuadro(det,video,guiaId){
+  try{
+    const vw=video.videoWidth,vh=video.videoHeight,g=document.getElementById(guiaId);
+    if(vw&&vh&&g){
+      if(!_cvQ){_cvQ=document.createElement('canvas');_cxQ=_cvQ.getContext('2d');}
+      if(_cxQ){
+        const r=roiQuadro(video.getBoundingClientRect(),g.getBoundingClientRect(),vw,vh,0.04);
+        if(r.sw>20&&r.sh>20){
+          _cvQ.width=Math.round(r.sw);_cvQ.height=Math.round(r.sh);_cxQ.drawImage(video,r.sx,r.sy,r.sw,r.sh,0,0,_cvQ.width,_cvQ.height);
+          const res=await det.detect(_cvQ);
+          return res.map(b=>({rawValue:b.rawValue,boundingBox:b.boundingBox?{x:b.boundingBox.x+r.sx,y:b.boundingBox.y+r.sy,width:b.boundingBox.width,height:b.boundingBox.height}:null}));
+        }
+      }
+    }
+  }catch(e){}
+  return det.detect(video);
 }
 async function pcEnviar(cod,qtd,seq){
   if(!/^\d{4,14}$/.test(String(cod)))return {ok:false,status:'código inválido'};
@@ -4194,13 +4234,11 @@ async function sageCiclo(v){
   if(!sageOn)return;
   if(v.readyState>=2){
     try{
-      const b=await sageDet.detect(v);
+      const b=await detectarNoQuadro(sageDet,v,'lsg-guia');
       if(b.length&&sageOn){
-        const c=b[0].rawValue,t=Date.now(),livre=eNova(estS,c,b[0].boundingBox,t,v);
-        if(livre){
-          if(gtinOk(c)){sageEnviar(c);}
-          else if(t-sageErroT>900){sageErroT=t;bipeErro();sageUI(null,'✗ Leitura incompleta','err');}
-        }
+        const c=b[0].rawValue,t=Date.now(),r=aceitarSolta(c,estS,b[0].boundingBox,t,v);
+        if(r.ok)sageEnviar(c);
+        else if(r.motivo&&t-sageErroT>900){sageErroT=t;bipeErro();sageUI(null,'✗ '+r.motivo,'err');}
       }
     }catch(e){}
   }
