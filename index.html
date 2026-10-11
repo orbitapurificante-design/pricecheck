@@ -737,10 +737,13 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
       <button class="scan-sub-btn" onclick="abrirEntradaManual()"><span>🔢</span> MANUAL</button>
       <button class="scan-sub-btn" onclick="document.getElementById('f-excel').click()"><span>📊</span> EXCEL</button>
     </div>
+    <button class="scan-main-btn" style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;margin-top:10px" onclick="abrirLeitorSage()">
+      <span style="font-size:20px">💻</span> LEITOR SAGE · QUALQUER CÓDIGO
+    </button>
     <div class="scan-sub-row">
-      <button class="scan-sub-btn" onclick="abrirLeituraRapidaMenu()"><span>⚡</span> LEITURA RÁPIDA</button>
-      <button class="scan-sub-btn" onclick="abrirLeitorSage()"><span>💻</span> LEITOR SAGE</button>
+      <button class="scan-sub-btn" onclick="abrirLeituraRapidaMenu()"><span>⚡</span> LEITURA RÁPIDA (PC)</button>
     </div>
+    <div style="text-align:center;font-size:10px;color:#7a8fba;padding:0 0 10px">versão 9 · Leitor Sage incluído</div>
       </div>
 
 
@@ -1461,7 +1464,7 @@ async function iniciarCamera(){
 
 function iniciarLoopNativo(video){
   if(scanLoopId)cancelAnimationFrame(scanLoopId);
-  lastScanCode=null;let processing=false;
+  lastScanCode=null;estR.c='';let processing=false;
   async function loop(){
     if(!scannerAberto)return;
     if(!processing&&video.readyState>=2){
@@ -1470,8 +1473,8 @@ function iniciarLoopNativo(video){
         const barcodes=await barcodeDetector.detect(video);
         if(barcodes.length>0&&scannerAberto){
           const cod=barcodes[0].rawValue;
-          const _t=Date.now(),_mesmo=(cod===lastScanCode),_livre=!_mesmo||(RAPIDO&&_t-lastVistoT>450);if(_mesmo)lastVistoT=_t;
-          if(_livre&&leituraAceite(cod)){lastScanCode=cod;lastVistoT=_t;setScanStatus('✓ Lido: '+cod,'ok');bipe();if(RAPIDO){leituraRapida(cod);}else{setTimeout(()=>{fecharScanner();processarCodigo(cod);},120);return;}}
+          const _t=Date.now(),_livre=RAPIDO?eNova(estR,cod,barcodes[0].boundingBox,_t,video):(cod!==lastScanCode);
+          if(_livre&&leituraAceite(cod)){lastScanCode=cod;setScanStatus('✓ Lido: '+cod,'ok');bipe();if(RAPIDO){leituraRapida(cod);}else{setTimeout(()=>{fecharScanner();processarCodigo(cod);},120);return;}}
         }
       }catch(e){}
       processing=false;
@@ -4118,7 +4121,7 @@ function leituraAceite(cod){
   cod=String(cod||'').trim();
   let motivo=null;
   if(!/^\d{8,14}$/.test(cod)||!gtinOk(cod))motivo='Leitura incompleta';
-  else if(DADOS.length&&!findProd(cod))motivo='Não está no ficheiro: '+cod;
+  else if(DADOS.length&&!RAPIDO&&!findProd(cod))motivo='Não está no ficheiro: '+cod;
   if(!motivo)return true;
   const agora=Date.now();
   if(agora-_erroT>900||cod!==_erroCod){_erroT=agora;_erroCod=cod;bipeErro();
@@ -4140,7 +4143,15 @@ processarCodigo=function(c){
   return _processarCodigoOrig.apply(this,arguments);
 };
 // ⚡ leitura rápida: câmara sempre ativa, só envia o código ao PC (não abre a ficha)
-let RAPIDO=false,rapidoN=0,lastVistoT=0;
+let RAPIDO=false,rapidoN=0;
+const estR={c:'',t:0,cx:0,cy:0},estS={c:'',t:0,cx:0,cy:0};
+function eNova(est,c,bb,t,v){
+  const cx=bb?bb.x+bb.width/2:0,cy=bb?bb.y+bb.height/2:0,W=(v&&v.videoWidth)||1280,H=(v&&v.videoHeight)||720;
+  let nova=c!==est.c;
+  if(!nova){const salto=bb&&(Math.abs(cx-est.cx)>W*.22||Math.abs(cy-est.cy)>H*.22);nova=(t-est.t>250)||!!salto;}   // saiu de vista, ou outro artigo entrou noutro sítio
+  est.t=t;est.cx=cx;est.cy=cy;if(nova)est.c=c;
+  return nova;
+}
 function rapidoTxt(){const b=document.getElementById('scan-rapido-btn');if(b){b.textContent='⚡ Leitura rápida: '+(RAPIDO?'LIGADA':'desligada');b.style.background=RAPIDO?'#c9a84c':'#1e2a4a';b.style.color=RAPIDO?'#1a2340':'#c9a84c';}}
 function alternarRapido(){
   if(!RAPIDO&&!pcAtivo()){toast('Ligue primeiro o envio para o PC (menu ☰)','err');return;}
@@ -4148,9 +4159,10 @@ function alternarRapido(){
   setScanStatus(RAPIDO?'⚡ Aponte aos códigos, um a seguir ao outro':'Aponte para o código','ok');
 }
 function leituraRapida(cod){
+  const _p=findProd(cod),_nome=_p?_p.nome:cod+' (fora do ficheiro)';
   if(!barcodeDetector)setTimeout(()=>{if(lastScanCode===cod)lastScanCode=null;},1200);   // (só no leitor alternativo; no nativo conta a saída de vista)
   if(!pcAtivo()){setScanStatus('❌ Envio para o PC desligado','err');return;}
-  pcEnviar(cod).then(r=>{if(r.ok){rapidoN++;setScanStatus('⚡ '+cod+' → PC  ·  '+rapidoN+' lido(s)','ok');}else setScanStatus(r.status===403?'❌ Senha do PC errada':'❌ PC recusou ('+r.status+')','err');})
+  pcEnviar(cod).then(r=>{if(r.ok){rapidoN++;setScanStatus('⚡ '+_nome+' → PC  ·  '+rapidoN+' lido(s)','ok');}else setScanStatus(r.status===403?'❌ Senha do PC errada':'❌ PC recusou ('+r.status+')','err');})
     .catch(()=>setScanStatus('❌ PC não responde','err'));
 }
 function abrirLeituraNormal(){RAPIDO=false;rapidoTxt();abrirScanner();}
@@ -4167,7 +4179,7 @@ async function abrirLeitorSage(){
   if(location.protocol!=='http:'){toast('Abra o index a partir do PC: http://IP-do-PC:8765','err');return;}
   if(!pcAtivo()){alternarPC();if(!pcAtivo())return;}
   if(!temBarcodeDetector()){toast('Este telemóvel não suporta o leitor rápido','err');return;}
-  sageN=0;sageErros=0;sageUlt='';sageVisto=0;sageOn=true;sageFila=Promise.resolve();
+  sageN=0;sageErros=0;estS.c='';sageOn=true;sageFila=Promise.resolve();
   $s('sage-modal').style.display='flex';sageUI('','A iniciar câmara…');
   try{
     sageDet=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','itf']});
@@ -4184,10 +4196,9 @@ async function sageCiclo(v){
     try{
       const b=await sageDet.detect(v);
       if(b.length&&sageOn){
-        const c=b[0].rawValue,t=Date.now(),mesmo=(c===sageUlt),livre=!mesmo||(t-sageVisto>450);   // o mesmo código volta a ler quando sai de vista e volta
-        if(mesmo)sageVisto=t;
+        const c=b[0].rawValue,t=Date.now(),livre=eNova(estS,c,b[0].boundingBox,t,v);
         if(livre){
-          if(gtinOk(c)){sageUlt=c;sageVisto=t;sageEnviar(c);}
+          if(gtinOk(c)){sageEnviar(c);}
           else if(t-sageErroT>900){sageErroT=t;bipeErro();sageUI(null,'✗ Leitura incompleta','err');}
         }
       }
