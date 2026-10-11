@@ -552,6 +552,8 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
     <button class="dbtn dbtn-s" onclick="document.getElementById('f-fotos-json').click();fecharTudo()">📥 Importar cópia das fotos (JSON)</button>
     <div class="dsep">PC (Sage)</div>
     <button class="dbtn dbtn-s" id="btn-pc" onclick="alternarPC();fecharTudo()">💻 Enviar leitura para o PC</button>
+    <button class="dbtn dbtn-s" onclick="abrirLeituraRapidaMenu();fecharTudo()">⚡ Leitura rápida</button>
+    <button class="dbtn dbtn-s" onclick="abrirLeitorSage();fecharTudo()">💻 Leitor Sage (só envia ao PC)</button>
     <button class="dbtn dbtn-s" id="btn-pcseq" onclick="configSequencia();fecharTudo()">⌨️ Teclas por artigo (encomenda)</button>
     <button class="dbtn dbtn-s" id="btn-pccod" onclick="alternarCodSage();fecharTudo()">🔢 Código enviado: Referência</button>
     <div class="dsep">Exportar</div>
@@ -622,6 +624,17 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
 </div>
 
 <!-- SCANNER MODAL (câmara + manual) -->
+<div id="sage-modal" style="display:none;position:fixed;inset:0;z-index:9500;background:#000;flex-direction:column;">
+  <div style="flex:1;position:relative;overflow:hidden;min-height:0;"><video id="lsg-video" playsinline autoplay muted style="width:100%;height:100%;object-fit:cover;display:block;"></video>
+    <div style="position:absolute;top:38%;left:50%;transform:translate(-50%,-50%);width:74vw;max-width:310px;height:150px;border:2.5px solid #c9a84c;border-radius:16px;box-shadow:0 0 0 4000px rgba(0,0,0,.5);"></div></div>
+  <div style="background:#1a2340;padding:14px 16px calc(14px + env(safe-area-inset-bottom));border-top:1px solid rgba(201,168,76,.3);color:#fff;text-align:center;">
+    <div style="font-size:10px;letter-spacing:1.5px;color:#7a8fba;font-weight:700;">💻 LEITOR SAGE</div>
+    <div style="display:flex;justify-content:center;align-items:baseline;gap:10px;"><span id="lsg-n" style="font:800 36px 'JetBrains Mono',monospace;color:#c9a84c;">0</span><span style="font-size:12px;color:#7a8fba;">enviados</span><span id="lsg-e" style="font-size:12px;color:#ef4444;"></span></div>
+    <div id="lsg-u" style="font:700 15px 'JetBrains Mono',monospace;min-height:22px;"></div>
+    <div id="lsg-s" style="font-size:12px;min-height:16px;margin:4px 0 12px;color:#7a8fba;"></div>
+    <button onclick="fecharLeitorSage()" style="width:100%;padding:13px;border:0;border-radius:12px;background:#c9a84c;color:#1a2340;font:800 14px Inter,sans-serif;">Fechar</button>
+  </div>
+</div>
 <div id="scan-modal" style="display:none;position:fixed;inset:0;z-index:9000;background:#000;flex-direction:column;">
   <div id="scan-vwrap" style="flex:1;position:relative;overflow:hidden;background:#000;">
     <video id="scan-video" playsinline autoplay muted style="width:100%;height:100%;object-fit:cover;display:block;"></video>
@@ -717,12 +730,16 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
   <!-- QR / Documento section -->
   <div class="scan-section">
     <div class="scan-sec-lbl">QR · DOCUMENTO</div>
-    <button class="scan-main-btn" onclick="abrirScanner()">
+    <button class="scan-main-btn" onclick="abrirLeituraNormal()">
       <span style="font-size:20px">📷</span> LER CÓDIGO DE BARRAS
     </button>
     <div class="scan-sub-row">
       <button class="scan-sub-btn" onclick="abrirEntradaManual()"><span>🔢</span> MANUAL</button>
       <button class="scan-sub-btn" onclick="document.getElementById('f-excel').click()"><span>📊</span> EXCEL</button>
+    </div>
+    <div class="scan-sub-row">
+      <button class="scan-sub-btn" onclick="abrirLeituraRapidaMenu()"><span>⚡</span> LEITURA RÁPIDA</button>
+      <button class="scan-sub-btn" onclick="abrirLeitorSage()"><span>💻</span> LEITOR SAGE</button>
     </div>
       </div>
 
@@ -1404,8 +1421,8 @@ async function iniciarCamera(){
       }catch(e){}
     }
     const constraints=deviceIdToUse
-      ?{video:{deviceId:{exact:deviceIdToUse},width:{ideal:1920},height:{ideal:1080}},audio:false}
-      :{video:{facingMode:'environment',width:{ideal:1920},height:{ideal:1080}},audio:false};
+      ?{video:{deviceId:{exact:deviceIdToUse},width:{ideal:1280},height:{ideal:720}},audio:false}
+      :{video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}},audio:false};
     try{streamAtual=await navigator.mediaDevices.getUserMedia(constraints);}
     catch(e1){
       try{streamAtual=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});}
@@ -1429,6 +1446,7 @@ async function iniciarCamera(){
     const video=document.getElementById('scan-video');
     video.srcObject=streamAtual;video.muted=true;
     try{await video.play();}catch(e){}
+    try{await streamAtual.getVideoTracks()[0].applyConstraints({advanced:[{focusMode:'continuous'}]});}catch(e){}
     setScanStatus('✓ Câmera ativa — aponte para o código','ok');
     if(temBarcodeDetector()&&barcodeDetector)iniciarLoopNativo(video);
     else carregarZXingEIniciar(video);
@@ -1452,7 +1470,8 @@ function iniciarLoopNativo(video){
         const barcodes=await barcodeDetector.detect(video);
         if(barcodes.length>0&&scannerAberto){
           const cod=barcodes[0].rawValue;
-          if(cod!==lastScanCode&&leituraAceite(cod)){lastScanCode=cod;setScanStatus('✓ Lido: '+cod,'ok');bipe();if(RAPIDO){leituraRapida(cod);}else{setTimeout(()=>{fecharScanner();processarCodigo(cod);},120);return;}}
+          const _t=Date.now(),_mesmo=(cod===lastScanCode),_livre=!_mesmo||(RAPIDO&&_t-lastVistoT>450);if(_mesmo)lastVistoT=_t;
+          if(_livre&&leituraAceite(cod)){lastScanCode=cod;lastVistoT=_t;setScanStatus('✓ Lido: '+cod,'ok');bipe();if(RAPIDO){leituraRapida(cod);}else{setTimeout(()=>{fecharScanner();processarCodigo(cod);},120);return;}}
         }
       }catch(e){}
       processing=false;
@@ -2317,8 +2336,8 @@ async function encIniciarCamera(){
       }catch(e){}
     }
     const constraints=deviceIdToUse
-      ?{video:{deviceId:{exact:deviceIdToUse},width:{ideal:1920},height:{ideal:1080}},audio:false}
-      :{video:{facingMode:'environment',width:{ideal:1920},height:{ideal:1080}},audio:false};
+      ?{video:{deviceId:{exact:deviceIdToUse},width:{ideal:1280},height:{ideal:720}},audio:false}
+      :{video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}},audio:false};
     try{encStreamAtual=await navigator.mediaDevices.getUserMedia(constraints);}
     catch(e1){
       try{encStreamAtual=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});}
@@ -4121,7 +4140,7 @@ processarCodigo=function(c){
   return _processarCodigoOrig.apply(this,arguments);
 };
 // ⚡ leitura rápida: câmara sempre ativa, só envia o código ao PC (não abre a ficha)
-let RAPIDO=localStorage.getItem('PCV_RAPIDO')==='1',rapidoN=0;
+let RAPIDO=false,rapidoN=0,lastVistoT=0;
 function rapidoTxt(){const b=document.getElementById('scan-rapido-btn');if(b){b.textContent='⚡ Leitura rápida: '+(RAPIDO?'LIGADA':'desligada');b.style.background=RAPIDO?'#c9a84c':'#1e2a4a';b.style.color=RAPIDO?'#1a2340':'#c9a84c';}}
 function alternarRapido(){
   if(!RAPIDO&&!pcAtivo()){toast('Ligue primeiro o envio para o PC (menu ☰)','err');return;}
@@ -4129,11 +4148,58 @@ function alternarRapido(){
   setScanStatus(RAPIDO?'⚡ Aponte aos códigos, um a seguir ao outro':'Aponte para o código','ok');
 }
 function leituraRapida(cod){
-  setTimeout(()=>{if(lastScanCode===cod)lastScanCode=null;},1000);   // mesmo código só volta a ler após 2 s
+  if(!barcodeDetector)setTimeout(()=>{if(lastScanCode===cod)lastScanCode=null;},1200);   // (só no leitor alternativo; no nativo conta a saída de vista)
   if(!pcAtivo()){setScanStatus('❌ Envio para o PC desligado','err');return;}
   pcEnviar(cod).then(r=>{if(r.ok){rapidoN++;setScanStatus('⚡ '+cod+' → PC  ·  '+rapidoN+' lido(s)','ok');}else setScanStatus(r.status===403?'❌ Senha do PC errada':'❌ PC recusou ('+r.status+')','err');})
     .catch(()=>setScanStatus('❌ PC não responde','err'));
 }
+function abrirLeituraNormal(){RAPIDO=false;rapidoTxt();abrirScanner();}
+function abrirLeituraRapidaMenu(){
+  if(location.protocol!=='http:'){toast('Abra o index a partir do PC: http://IP-do-PC:8765','err');return;}
+  if(!pcAtivo()){alternarPC();if(!pcAtivo())return;}
+  RAPIDO=true;rapidoN=0;rapidoTxt();abrirScanner();
+}
+// ══ LEITOR SAGE: o telemóvel funciona só como leitor de códigos do PC (sem fichas, sem ficheiro de produtos) ══
+let sageOn=false,sageStream=null,sageDet=null,sageN=0,sageErros=0,sageUlt='',sageVisto=0,sageErroT=0,sageFila=Promise.resolve();
+const $s=id=>document.getElementById(id);
+function sageUI(u,s,tipo){if(u!=null)$s('lsg-u').textContent=u;if(s!=null){$s('lsg-s').textContent=s;$s('lsg-s').style.color=tipo==='err'?'#ef4444':tipo==='ok'?'#10b981':'#7a8fba';}$s('lsg-n').textContent=sageN;$s('lsg-e').textContent=sageErros?'· '+sageErros+' falha(s)':'';}
+async function abrirLeitorSage(){
+  if(location.protocol!=='http:'){toast('Abra o index a partir do PC: http://IP-do-PC:8765','err');return;}
+  if(!pcAtivo()){alternarPC();if(!pcAtivo())return;}
+  if(!temBarcodeDetector()){toast('Este telemóvel não suporta o leitor rápido','err');return;}
+  sageN=0;sageErros=0;sageUlt='';sageVisto=0;sageOn=true;sageFila=Promise.resolve();
+  $s('sage-modal').style.display='flex';sageUI('','A iniciar câmara…');
+  try{
+    sageDet=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','itf']});
+    sageStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}},audio:false});
+    const v=$s('lsg-video');v.srcObject=sageStream;v.muted=true;try{await v.play();}catch(e){}
+    try{await sageStream.getVideoTracks()[0].applyConstraints({advanced:[{focusMode:'continuous'}]});}catch(e){}
+    sageUI('','Aponte ao código · cada leitura vai direta para o Sage','ok');
+    sageCiclo(v);
+  }catch(e){sageUI('','Câmara indisponível','err');}
+}
+async function sageCiclo(v){
+  if(!sageOn)return;
+  if(v.readyState>=2){
+    try{
+      const b=await sageDet.detect(v);
+      if(b.length&&sageOn){
+        const c=b[0].rawValue,t=Date.now(),mesmo=(c===sageUlt),livre=!mesmo||(t-sageVisto>450);   // o mesmo código volta a ler quando sai de vista e volta
+        if(mesmo)sageVisto=t;
+        if(livre){
+          if(gtinOk(c)){sageUlt=c;sageVisto=t;sageEnviar(c);}
+          else if(t-sageErroT>900){sageErroT=t;bipeErro();sageUI(null,'✗ Leitura incompleta','err');}
+        }
+      }
+    }catch(e){}
+  }
+  requestAnimationFrame(()=>sageCiclo(v));
+}
+function sageEnviar(c){
+  bipe();sageN++;sageUI(c,'✓ enviado','ok');
+  sageFila=sageFila.then(()=>pcEnviar(c)).then(r=>{if(!r.ok)throw new Error(r.status);}).catch(()=>{sageErros++;sageN--;sageUI(null,'❌ O PC não recebeu '+c,'err');});   // fila: chegam ao Sage pela ordem da leitura
+}
+function fecharLeitorSage(){sageOn=false;if(sageStream){sageStream.getTracks().forEach(t=>t.stop());sageStream=null;}$s('lsg-video').srcObject=null;$s('sage-modal').style.display='none';}
 // ══ ENCOMENDA → SAGE: preenche código e quantidade de cada linha ══
 function configSequencia(){
   const a=prompt('Teclas por artigo, separadas por vírgula.\nPalavras: COD, QTD, TAB, ENTER, DOWN, UP, LEFT, RIGHT, ESPERA\nExemplo: COD,ENTER,ESPERA,QTD,ENTER',localStorage.getItem('PCV_PCSEQ')||'COD,ENTER,ESPERA,QTD,ENTER');
