@@ -305,6 +305,7 @@ header{position:fixed;top:0;left:0;right:0;z-index:3000;background:var(--navy);b
 .enc-total-val{font-size:22px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--a);}
 
 /* SCANNER ENCOMENDAS (contínuo) */
+#pmodal-bg{z-index:9100;}
 #enc-scan-modal{display:none;position:fixed;inset:0;z-index:9500;background:#000;flex-direction:column;}
 .enc-scan-badge{position:absolute;top:14px;left:14px;background:rgba(201,168,76,0.92);color:#1a2340;font-size:11px;font-weight:800;padding:5px 12px;border-radius:20px;letter-spacing:0.5px;}
 .enc-scan-count{position:absolute;top:14px;right:14px;background:rgba(16,185,129,0.92);color:#fff;font-size:11px;font-weight:800;padding:5px 12px;border-radius:20px;}
@@ -1483,18 +1484,24 @@ async function iniciarCamera(){
   }
 }
 
+function scanLer(cod){
+  // igual ao leitor das encomendas: leitura contínua; o mesmo código só volta a ser lido passado 1 s
+  setScanStatus('✓ Lido: '+cod,'ok');bipe();
+  if(RAPIDO){leituraRapida(cod);}else{processarCodigo(cod);}
+}
+function pmodalAberto(){const m=document.getElementById('pmodal-bg');return !!(m&&m.classList.contains('open'));}
 function iniciarLoopNativo(video){
   if(scanLoopId)cancelAnimationFrame(scanLoopId);
-  lastScanCode=null;let processing=false;
+  lastScanCode=null;let processing=false,lastT=0;
   async function loop(){
     if(!scannerAberto)return;
-    if(!processing&&video.readyState>=2){
+    if(!processing&&video.readyState>=2&&!pmodalAberto()){
       processing=true;
       try{
         const barcodes=await detectarNoQuadro(barcodeDetector,video,'scan-guia');
-        if(barcodes.length>0&&scannerAberto){
-          const cod=barcodes[0].rawValue;
-          if(cod!==lastScanCode&&leituraAceite(cod)){lastScanCode=cod;setScanStatus('✓ Lido: '+cod,'ok');bipe();setTimeout(()=>{fecharScanner();processarCodigo(cod);},120);return;}
+        if(barcodes.length>0&&scannerAberto&&!pmodalAberto()){
+          const cod=barcodes[0].rawValue,now=Date.now();
+          if((cod!==lastScanCode||(now-lastT)>1000)&&leituraAceite(cod)){lastScanCode=cod;lastT=now;scanLer(cod);}
         }
       }catch(e){}
       processing=false;
@@ -1506,9 +1513,12 @@ function iniciarLoopNativo(video){
 
 function iniciarZXing(video){
   try{
-    zxingReader=new ZXing.BrowserMultiFormatReader();lastScanCode=null;
+    zxingReader=new ZXing.BrowserMultiFormatReader();lastScanCode=null;let lastT=0;
     zxingReader.decodeFromStream(streamAtual,video,(result,err)=>{
-      if(result&&scannerAberto){const cod=result.getText();if(cod===lastScanCode||!leituraAceite(cod))return;lastScanCode=cod;setScanStatus('✓ Lido: '+cod,'ok');bipe();if(RAPIDO){leituraRapida(cod);}else{setTimeout(()=>{fecharScanner();processarCodigo(cod);},120);}}
+      if(result&&scannerAberto&&!pmodalAberto()){
+        const cod=result.getText(),now=Date.now();
+        if((cod!==lastScanCode||(now-lastT)>1000)&&leituraAceite(cod)){lastScanCode=cod;lastT=now;scanLer(cod);}
+      }
     });
   }catch(e){setScanStatus('Use entrada manual','err');}
 }
@@ -1779,7 +1789,7 @@ function _doRenderProdutos(){
     if(FAM_ESTADOS[cat]===undefined)FAM_ESTADOS[cat]=true;
     const aberto=busca?true:!FAM_ESTADOS[cat];
     const ce=cat.replace(/'/g,"\\'");
-    html+=`<div class="fam-h" onclick="toggleFam('${ce}')"><span><span class="fam-seta">${aberto?'▼':'▶'}</span>${cat} (${prods.length})</span></div>
+    html+=`<div class="fam-h" onclick="toggleFam('${ce}')" ondblclick="FAM_ESTADOS['${ce}']=false;renderProdutos()"><span><span class="fam-seta">${aberto?'▼':'▶'}</span>${cat} (${prods.length})</span></div>
     <div class="fam-c${aberto?'':' hidden'}">`;
     (aberto?prods:[]).forEach(p=>{
       if(PROD_N++>=PROD_LIM){PROD_CORTE=true;return;}
@@ -3730,7 +3740,7 @@ function encProdAbrir(){
   if(!encForn()){toast('Selecione primeiro um fornecedor','err');irParaFornecedores();return;}
   if(!DADOS.length){toast('Carregue primeiro o Excel de produtos','err');return;}
   document.getElementById('encp-forn').textContent='Fornecedor: '+encForn().nome;
-  document.getElementById('encp-busca').value='';ENCP.lim=100;ENCP.pid=new Map();
+  document.getElementById('encp-busca').value='';ENCP.lim=100;ENCP.pid=new Map();ENCP.fam={};ENCP._q=null;
   document.getElementById('enc-prod-bg').classList.add('open');
   encProdRender();
 }
@@ -3744,19 +3754,41 @@ function encProdTotais(){
 }
 function encProdRender(){
   const q=fatSemAcentos(document.getElementById('encp-busca').value||'').trim();
-  const lista=q?DADOS.filter(p=>fatSemAcentos(p.nome+' '+p.cod+' '+p.ean).includes(q)):DADOS.slice();
-  ENCP.list=lista;
-  const box=document.getElementById('encp-list'),vis=lista.slice(0,ENCP.lim);
-  if(!vis.length){box.innerHTML='<div class="fat-empty">Sem resultados</div>';encProdTotais();return;}
-  box.innerHTML=vis.map((p,i)=>{
-    const it=encProdItem(p),qtd=it?it.qtd:0,img=getImg(p);
-    return `<div class="encp-row ${qtd?'sel':''}" id="encp-r-${i}">
+  const lista=q?DADOS.filter(p=>fatSemAcentos(p.nome+' '+p.cod+' '+p.ean).includes(q)):DADOS;
+  if(!ENCP.fam)ENCP.fam={};
+  if(ENCP._q!==q){ENCP._q=q;ENCP.lim=100;}
+  // agrupar por família (o que escreve na pesquisa abre as famílias com resultados)
+  const grupos={};lista.forEach(p=>{const c=String(p.cat||'GERAL');(grupos[c]=grupos[c]||[]).push(p);});
+  const cats=Object.keys(grupos).sort((a,b)=>a.localeCompare(b,'pt'));
+  const box=document.getElementById('encp-list');
+  if(!cats.length){ENCP.list=[];box.innerHTML='<div class="fat-empty">Sem resultados</div>';encProdTotais();return;}
+  const flat=[];let n=0,cortou=0,html='';
+  cats.forEach((c,ci)=>{
+    const ps=grupos[c],aberta=q?true:!!ENCP.fam[c];
+    html+=`<div class="fam-h" data-ci="${ci}" onclick="encProdFam(${ci})" ondblclick="encProdFam(${ci},true)"><span><span class="fam-seta">${aberta?'▼':'▶'}</span>${escH(c)} (${ps.length})</span></div>`;
+    if(!aberta)return;
+    ps.forEach(p=>{
+      if(n>=ENCP.lim){cortou++;return;}
+      n++;const i=flat.length;flat.push(p);
+      const it=encProdItem(p),qtd=it?it.qtd:0,img=getImg(p);
+      html+=`<div class="encp-row ${qtd?'sel':''}" id="encp-r-${i}">
       ${img?`<img class="encp-img" loading="lazy" src="${img}" alt="">`:'<div class="encp-img">📦</div>'}
       <div class="encp-info"><div class="encp-nome">${String(p.nome).replace(/</g,'&lt;')}</div><div class="encp-cod">${getCod(p)}<button class="enc-un" id="encp-u-${i}" onclick="encProdUn(${i})" style="display:${qtd?'inline-block':'none'}">${it?(it.un||'CX'):'CX'}</button></div></div>
       <div class="encp-q"><button onclick="encProdAlt(${i},-1)">−</button><input class="encp-qi" id="encp-q-${i}" type="number" inputmode="numeric" min="0" value="${qtd}" onclick="this.select()" onchange="encProdSet(${i},this.value)"><button class="mais" onclick="encProdAlt(${i},1)">+</button></div>
     </div>`;
-  }).join('')+(lista.length>vis.length?`<button class="fadd" style="margin:6px 0;width:100%" onclick="ENCP.lim+=100;encProdRender()">Mostrar mais (${lista.length-vis.length})…</button>`:'');
+    });
+  });
+  ENCP.list=flat;ENCP.cats=cats;
+  if(cortou)html+=`<button class="fadd" style="margin:6px 0;width:100%" onclick="ENCP.lim+=100;encProdRender()">Mostrar mais (${cortou})…</button>`;
+  const y=box.scrollTop;box.innerHTML=html;box.scrollTop=y;
   encProdTotais();
+}
+// clique abre/fecha a família; duplo clique garante que fica aberta
+function encProdFam(ci,abrir){
+  const c=(ENCP.cats||[])[ci];if(c===undefined)return;
+  if(!ENCP.fam)ENCP.fam={};
+  ENCP.fam[c]=abrir?true:!ENCP.fam[c];
+  encProdRender();
 }
 function encProdSet(i,val){
   const p=ENCP.list[i];if(!p||!encForn())return;
@@ -4207,7 +4239,6 @@ function alternarRapido(){
 }
 function leituraRapida(cod){
   const _p=findProd(cod),_nome=_p?_p.nome:cod+' (fora do ficheiro)';
-  if(!barcodeDetector)setTimeout(()=>{if(lastScanCode===cod)lastScanCode=null;},1200);   // (só no leitor alternativo; no nativo conta a saída de vista)
   if(!pcAtivo()){setScanStatus('❌ Envio para o PC desligado','err');return;}
   pcEnviar(cod).then(r=>{if(r.ok){rapidoN++;setScanStatus('⚡ '+_nome+' → PC  ·  '+rapidoN+' lido(s)','ok');}else setScanStatus(r.status===403?'❌ Senha do PC errada':'❌ PC recusou ('+r.status+')','err');})
     .catch(()=>setScanStatus('❌ PC não responde','err'));
